@@ -122,6 +122,8 @@ public class RetroForm : Form
     private Point resizeStart; private Size initialSize;
     private Control? workspaceParent;
     public bool IsWorkspaceMaximized { get; private set; }
+    // The inherited WinForms designer instantiates base forms without arguments.
+    public RetroForm() : this("Dream OS") { }
     public RetroForm(string title)
     {
         Text=title; Font=new("Tahoma",10); BackColor=Theme.Cream; ForeColor=Theme.Ink;
@@ -178,6 +180,7 @@ public class ExerciseForm : RetroForm
     protected FlowLayoutPanel Body { get; } = new() { Dock=DockStyle.Fill, FlowDirection=FlowDirection.TopDown, WrapContents=false, AutoScroll=true, Padding=new(14), BackColor=Theme.Cream };
     protected Label Output { get; } = new() { AutoSize=true, MaximumSize=new(200,0), BackColor=Color.Transparent, Padding=new(8), Margin=new(5), Text="Ready when you are.", Font=new("Tahoma",11,FontStyle.Bold) };
     private readonly FlowLayoutPanel actions=new() { Dock=DockStyle.Bottom, Height=62, Padding=new(8), BackColor=Theme.Pink, AutoScroll=true };
+    public ExerciseForm() : this("Dream OS exercise") { }
     protected ExerciseForm(string title) : base(title)
     {
         var content=new Panel { Dock=DockStyle.Fill };
