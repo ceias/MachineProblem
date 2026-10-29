@@ -82,6 +82,28 @@ Check("Demo auth success",()=>Equal(true,auth.Authenticate("Dreamer","dream10"))
 Check("Demo auth missing name",()=>Equal(false,auth.Authenticate(" ","dream10")));
 Check("Demo auth wrong password",()=>Equal(false,auth.Authenticate("Dreamer","wrong")));
 
+Check("Receipt export preserves computed payroll and deductions",()=>
+{
+    var pay=payroll.Calculate(Position.A,CivilStatus.Single,20);
+    var receipt=new ReceiptData("PAYSLIP","PAY-TEST",new DateTime(2026,10,29,12,30,0),[new("Gross",Money.Format(pay.Basic)),new("SSS",Money.Format(pay.Sss)),new("Tax",Money.Format(pay.Tax))],"NET PAY",Money.Format(pay.Net),"Classroom copy");
+    string text=receipt.ToText();
+    foreach(string required in new[]{"PAYSLIP","PAY-TEST",Money.Format(10000),Money.Format(700),Money.Format(1000),Money.Format(8300),"2026-10-29 12:30","Classroom copy"})
+        if(!text.Contains(required))throw new Exception("Missing receipt data: "+required);
+});
+Check("Receipt export preserves all cart rows",()=>
+{
+    var cart=ExampleCart();
+    var receipt=new ReceiptData("SALE","SALE-TEST",DateTime.Now,cart.Items.Select(i=>new ReceiptEntry(i.Product.Name+" x "+i.Quantity,Money.Format(i.Amount))).ToArray(),"TOTAL",Money.Format(cart.Total(cash)),"Demo");
+    string text=receipt.ToText();
+    if(!text.Contains("Air Conditioner x 1")||!text.Contains("Electric Fan x 2")||!text.Contains(Money.Format(10450)))throw new Exception("Incomplete sale receipt");
+});
+Check("Receipt references are unique and filename safe",()=>
+{
+    var references=Enumerable.Range(0,100).Select(_=>ReceiptData.NewReference("PAY")).ToArray();
+    Equal(100,references.Distinct().Count());
+    if(references.Any(r=>r.Any(c=>!(char.IsAsciiLetterOrDigit(c)||c=='-'))))throw new Exception("Unsafe reference");
+});
+
 string temp = Path.Combine(Path.GetTempPath(),"dreamos-tests-"+Guid.NewGuid().ToString("N"));
 try
 {

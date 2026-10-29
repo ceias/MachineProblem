@@ -19,4 +19,5 @@
     <Content Include="../DreamOS/02_App_Window_Concept_Crops/Tuition_Fees.png" Link="Assets/Tuition.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../DreamOS/02_App_Window_Concept_Crops/Hotel_Billing.png" Link="Assets/Hotel.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup><Content Include="Assets/WorkflowSprites.png" Link="Assets/WorkflowSprites.png" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

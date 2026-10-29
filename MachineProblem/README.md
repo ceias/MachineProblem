@@ -59,7 +59,7 @@ Notes and votes are stored atomically under `%LOCALAPPDATA%\DreamOS` as `notes.j
 - `DreamOS.Tests/`: dependency-free executable regression suite. **Run it with `dotnet run`, not `dotnet test`**; process exit code is nonzero on failure.
 - `DreamOS/`: supplied artwork, screenshots and design briefs.
 
-Encapsulation: cart items and election state mutate through validated operations. Inheritance: `RetroForm` → `ExerciseForm` → concrete exercise forms, plus custom UserControls. Abstraction: `IPaymentRule` and `IStorage<T>`. Polymorphism: cash/charge rules implement distinct calculations behind the same interface; JSON and test storage implement the storage contract.
+Encapsulation: cart items and election state mutate through validated operations. Inheritance: `RetroForm` → `WorkflowForm` → concrete exercise forms, plus custom UserControls. Abstraction: `IPaymentRule` and `IStorage<T>`. Polymorphism: cash/charge rules implement distinct calculations behind the same interface; JSON and test storage implement the storage contract.
 
 ## Cloud development
 
@@ -82,7 +82,7 @@ Use the existing isolated checkout; no Git worktree is needed. The reusable envi
 
 ## Validation
 
-Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **89 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
+Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **92 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
 
 On Windows, verify this acceptance pass before presentation:
 
@@ -112,3 +112,23 @@ The shortcut buttons and their shelf now paint the cached workspace backdrop at 
 Caption buttons draw their minimize/maximize/close marks as lines and rectangles, avoiding font clipping and ellipsis. The welcome card has a two-column illustration/content layout, and the right-hand date/time card opens the existing widgets. Taskbar item heights leave room for a horizontal scrollbar when many apps are open. The guide bubble and character paint together over the cached backdrop.
 
 Windows visual acceptance remains pending: specifically inspect shortcut backgrounds after opening/moving/minimizing windows, scrolling the shelf, tabbing through shortcuts, resizing the workspace and changing DPI. Validate caption actions and the calendar-card launch. The Linux build and calculation tests cannot establish that Windows painting matches the design.
+
+## Redesigned exercise windows
+
+The nine exercise popups now use `WorkflowForm` with grouped input areas and fixed action buttons. The previous generic scrolling form and decorative results sidebar are no longer used by the exercise windows.
+
+- **Pizza:** illustrated size, crust, topping and drink cards; multiple topping selections; dining mode; live price hint and itemized order slip.
+- **Lotto:** three large digit steppers, quick demo-bet buttons, separate winning-number balls and a clearly labeled fictional ticket.
+- **Tuition:** enrollment and study-load groups, an aligned miscellaneous-fee table and an assessment slip.
+- **Payroll:** employee profile, pay period, days worked and a payslip separating gross earnings, SSS, tax and net pay.
+- **Hotel:** guest/contact details, stay dates, room category/capacity, payment, live duration/rate estimate and a guest folio. This remains a classroom billing system; it does not track room inventory or confirm reservations.
+- **Appliances:** searchable illustrated product cards replace the product dropdown. Quantity applies per card click. The cashier shows a selectable item grid, payment method, tendered cash, total, remaining cash needed and change. Complete sale validates tendered cash before generating a receipt. Changing the basket/payment invalidates the previous receipt.
+- **Election:** ballot-entry and live-tally panels plus a vote confirmation slip; the one-vote-per-ID rules remain intact.
+- **Password / About:** compact layouts without unnecessary invoice sidebars.
+- **Widgets:** side-by-side calendar/reminder tools, an enlarged note editor and a music transport panel. Notes, Music and Remind launchers plus a saved-note preview are visible next to the desktop guide; saving notes updates that preview.
+
+The new 30-sprite atlas is documented in `DreamOS.WinForms/Assets/README.md`. Both application projects copy it to the build/publish output. The original supplied artwork is preserved.
+
+Receipt panels support **Save slip** (text) and **Print** (Windows print dialog; use Microsoft Print to PDF if installed). They wrap long names/items, scroll independently, and remain disabled until a current result exists. Payroll and tuition documents are statements, hotel folios are estimates, and lotto/vote slips are explicitly classroom simulations. There is no claim that a real payment or booking occurred.
+
+Run the regression suite with `dotnet run --project DreamOS.Tests -c Release`: it now includes receipt data/export checks in addition to the original formula, validation and persistence tests. Windows visual acceptance and real print/audio device validation remain necessary; a Linux cross-build does not verify actual WinForms rendering.

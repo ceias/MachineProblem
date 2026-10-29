@@ -16,8 +16,8 @@ public static class Theme
     {
         var c=new ComboBox { DropDownStyle=ComboBoxStyle.DropDownList, Width=220, Margin=new(5), AccessibleName="Selection", BackColor=Color.White, FlatStyle=FlatStyle.Standard }; c.Items.AddRange(items.Cast<object>().ToArray()); return c;
     }
-    public static ComboBox Choice<T>() where T:struct,Enum => Choice(Enum.GetNames<T>());
-    public static T Selected<T>(ComboBox c) where T:struct,Enum => c.SelectedItem is string s && Enum.TryParse<T>(s,out var v) ? v : throw new ArgumentException($"Select {c.AccessibleName}.");
+    public static ComboBox Choice<T>() where T:struct,Enum => Choice(Enum.GetNames<T>().Select(n=>System.Text.RegularExpressions.Regex.Replace(n,"([a-z])([A-Z])","$1 $2")));
+    public static T Selected<T>(ComboBox c) where T:struct,Enum => c.SelectedItem is string s && Enum.TryParse<T>(s.Replace(" ",""),out var v) ? v : throw new ArgumentException($"Select {c.AccessibleName}.");
     public static NumericUpDown Number(decimal min,decimal max,decimal value=0,int decimals=0) => new() { Minimum=min, Maximum=max, Value=Math.Clamp(value,min,max), DecimalPlaces=decimals, Width=150, Margin=new(5), ThousandsSeparator=true };
     public static void Guard(IWin32Window owner,Action action)
     {

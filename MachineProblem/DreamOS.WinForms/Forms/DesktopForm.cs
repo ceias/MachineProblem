@@ -9,6 +9,7 @@ public sealed class DesktopForm : RetroForm
     private readonly WallpaperPanel workspace=new() { Dock=DockStyle.Fill, ShowDesktopBrand=true };
     private readonly FlowLayoutPanel taskbar=new() { Dock=DockStyle.Fill, WrapContents=false, AutoScroll=true, BackColor=Theme.Pink };
     private readonly DesktopCalendarCard calendar=new() { Anchor=AnchorStyles.Top|AnchorStyles.Right };
+    private readonly DesktopWidgetDock widgetDock=new() { Anchor=AnchorStyles.Top|AnchorStyles.Right };
     private readonly GuideControl guide=new() { Anchor=AnchorStyles.Right|AnchorStyles.Bottom };
     private readonly System.Windows.Forms.Timer timer=new() { Interval=1000 };
     private readonly Label clock=new() { Dock=DockStyle.Right, Width=115, TextAlign=ContentAlignment.MiddleCenter, BorderStyle=BorderStyle.Fixed3D, BackColor=Theme.Cream };
@@ -29,7 +30,7 @@ public sealed class DesktopForm : RetroForm
             new("password","Password Entry","Practice the password flow into the appliance store. Demo password: dream10.",()=>new PasswordForm(OpenStore)),
             new("store","Appliance Store","Add appliances. Cash gives 5% off; charge adds 5%. Compute cash change.",()=>new StoreForm(username)),
             new("about","About + Author","Meet Dream OS, a native C# OOP classroom project.",()=>new AboutForm()),
-            new("widgets","Desktop Widgets","Your clock, calendar, saved notes, reminders and local WAV player.",()=>new WidgetsForm(Notify))
+            new("widgets","Desktop Widgets","Your clock, calendar, saved notes, reminders and local WAV player.",()=>CreateWidgets("Clock + calendar"))
         ];
         var shortcuts=new DesktopIconShelf { Location=new(12,16), Width=260, Height=560, FlowDirection=FlowDirection.LeftToRight, WrapContents=true, AutoScroll=true, Padding=new(4), Anchor=AnchorStyles.Top|AnchorStyles.Bottom|AnchorStyles.Left };
         foreach(var app in apps)
@@ -44,14 +45,17 @@ public sealed class DesktopForm : RetroForm
         var bottom=new Panel { Dock=DockStyle.Bottom, Height=64, BackColor=Theme.Pink, Padding=new(4) };
         var start=Theme.Button("♥ Start",()=>startMenu.Show(bottom,new Point(0,0),ToolStripDropDownDirection.AboveRight)); start.Dock=DockStyle.Left; start.Width=100; start.AutoSize=false; start.Font=new("Tahoma",10,FontStyle.Bold);
         bottom.Controls.Add(taskbar); bottom.Controls.Add(clock); bottom.Controls.Add(start);
-        calendar.Click+=(_,_)=>Open(apps.First(a=>a.Id=="widgets"));
+        calendar.Click+=(_,_)=>OpenWidgets("Clock + calendar");
+        widgetDock.PageRequested+=OpenWidgets;
         guide.Register(calendar,"Your clock, calendar and notes. Click to open your desktop widgets.");
-        workspace.Controls.Add(shortcuts); workspace.Controls.Add(calendar); workspace.Controls.Add(guide); Controls.Add(workspace); Controls.Add(bottom);
+        workspace.Controls.Add(shortcuts); workspace.Controls.Add(calendar); workspace.Controls.Add(widgetDock); workspace.Controls.Add(guide); Controls.Add(workspace); Controls.Add(bottom);
         void LayoutDesktop()
         {
             int margin=LogicalToDeviceUnits(18);
-            guide.Location=new(Math.Max(0,workspace.Width-guide.Width-margin),Math.Max(0,workspace.Height-guide.Height-margin));
-            calendar.Location=new(Math.Max(0,workspace.Width-calendar.Width-margin),LogicalToDeviceUnits(24));
+            calendar.Location=new(Math.Max(0,workspace.Width-calendar.Width-margin),LogicalToDeviceUnits(16));
+            widgetDock.Location=new(calendar.Left,calendar.Bottom+LogicalToDeviceUnits(7));
+            guide.Height=Math.Max(LogicalToDeviceUnits(160),Math.Min(LogicalToDeviceUnits(315),workspace.Height-widgetDock.Bottom-margin-LogicalToDeviceUnits(8)));
+            guide.Location=new(Math.Max(0,workspace.Width-guide.Width-margin),Math.Max(widgetDock.Bottom+LogicalToDeviceUnits(8),workspace.Height-guide.Height-margin));
             shortcuts.Height=Math.Max(180,workspace.Height-LogicalToDeviceUnits(32));
         }
         workspace.Resize+=(_,_)=>LayoutDesktop();
@@ -72,15 +76,26 @@ public sealed class DesktopForm : RetroForm
         if(windows.TryGetValue(app.Id,out var running)) { Restore(running); return; }
         var window=app.Create(); window.TopLevel=false; window.ShowInTaskbar=false;
         workspace.Controls.Add(window); window.StartPosition=FormStartPosition.Manual;
-        window.Size=new(Math.Min(window.Width,Math.Max(window.MinimumSize.Width,workspace.Width-250)),Math.Min(window.Height,Math.Max(window.MinimumSize.Height,workspace.Height-40)));
-        window.Location=new(Math.Max(10,(workspace.Width-window.Width)/2)+windows.Count%4*16,Math.Max(10,(workspace.Height-window.Height)/2)+windows.Count%4*12);
+        int usableWidth=window is WorkflowForm?Math.Max(window.MinimumSize.Width,workspace.Width-guide.Width-LogicalToDeviceUnits(38)):workspace.Width-250;
+        window.Size=new(Math.Min(window.Width,usableWidth),Math.Min(window.Height,Math.Max(window.MinimumSize.Height,workspace.Height-LogicalToDeviceUnits(16))));
+        int x=window is WorkflowForm?LogicalToDeviceUnits(12):Math.Max(10,(workspace.Width-window.Width)/2);
+        window.Location=new(x,Math.Max(5,(workspace.Height-window.Height)/2));
         windows.Add(app.Id,window);
         var task=Theme.Button(app.Title,()=>Restore(window)); task.AutoSize=false; task.MinimumSize=Size.Empty; task.Size=new(LogicalToDeviceUnits(172),LogicalToDeviceUnits(34)); task.Margin=new(3,2,3,2); task.Font=new("Tahoma",9); task.Image=Artwork.Icon(app.Id,24); task.BackColor=Theme.Cream; tasks.Add(app.Id,task); taskbar.Controls.Add(task);
         guide.Register(task,app.Help); RegisterHelp(window,app.Help);
         window.Enter+=(_,_)=>Highlight(app.Id);
         window.VisibleChanged+=(_,_)=> { if(!window.Visible)task.BackColor=Theme.Cream; };
         window.FormClosed+=(_,_)=> { windows.Remove(app.Id); tasks.Remove(app.Id); taskbar.Controls.Remove(task); task.Dispose(); workspace.Controls.Remove(window); window.Dispose(); };
-        window.Show(); window.BringToFront(); window.Focus(); Highlight(app.Id); guide.Say(app.Help);
+        window.Show();
+        // Fit after the first Show, when WinForms has applied the actual monitor DPI.
+        if(window is WorkflowForm)
+        {
+            int width=Math.Max(420,workspace.Width-guide.Width-LogicalToDeviceUnits(38)),height=Math.Max(300,workspace.Height-LogicalToDeviceUnits(16));
+            window.MinimumSize=new(Math.Min(window.MinimumSize.Width,width),Math.Min(window.MinimumSize.Height,height));
+            window.Size=new(Math.Min(window.Width,width),Math.Min(window.Height,height));
+            window.Location=new(LogicalToDeviceUnits(12),Math.Max(4,(workspace.Height-window.Height)/2));
+        }
+        window.BringToFront(); window.Focus(); Highlight(app.Id); guide.Say(app.Help);
     });
     private void Highlight(string id) { foreach(var (key,button) in tasks)button.BackColor=key==id?Theme.Blue:Theme.Cream; }
     private void RegisterHelp(Control parent,string help)
@@ -103,6 +118,15 @@ public sealed class DesktopForm : RetroForm
             else open[i].Location=new(160+i%7*26,20+i%7*26);
             open[i].BringToFront();
         }
+    }
+    private WidgetsForm CreateWidgets(string page)
+    {
+        var form=new WidgetsForm(Notify,page); form.NotesSaved+=(_,_)=>widgetDock.ReloadNotes(); return form;
+    }
+    private void OpenWidgets(string page)
+    {
+        Open(apps.First(a=>a.Id=="widgets") with { Create=()=>CreateWidgets(page) });
+        if(windows.TryGetValue("widgets",out var window)&&window is WidgetsForm widgets)widgets.SelectPage(page);
     }
     private void OpenStore(string username)=>Open(apps.First(a=>a.Id=="store") with { Create=()=>new StoreForm(username) });
     private void Notify(string text) { notifications.Add($"{DateTime.Now:t} • {text}"); if(notifications.Count>100)notifications.RemoveAt(0); guide.Say(text); MessageBox.Show(this,text,"Dream OS • reminder",MessageBoxButtons.OK,MessageBoxIcon.Information); }
