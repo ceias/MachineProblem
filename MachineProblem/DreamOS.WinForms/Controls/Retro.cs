@@ -23,7 +23,7 @@ public static class Theme
     {
         try { action(); }
         catch(Exception ex) when(ex is ArgumentException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException or System.ComponentModel.Win32Exception)
-        { MessageBox.Show(owner,ex.Message,"Dream OS • please check",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
+        { DreamDialog.Show(owner,ex.Message,"Dream OS • please check",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
     }
     public static void Bevel(Graphics g,Rectangle r,bool sunken=false)
     {
@@ -120,12 +120,12 @@ public sealed class RetroTitleBar : Panel
 {
     private readonly Label caption=new() { Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleLeft, BackColor=Color.Transparent, Padding=new(8,0,0,0), Font=new("Tahoma",10,FontStyle.Bold) };
     private readonly Button minimize,maximize;
+    private readonly FlowLayoutPanel actions=new() { Dock=DockStyle.Right,Width=98,FlowDirection=FlowDirection.LeftToRight,WrapContents=false,BackColor=Color.Transparent,Padding=new(0,1,0,0) };
     private readonly RetroForm owner;
     private Point dragStart,windowStart;
     public RetroTitleBar(RetroForm owner)
     {
         this.owner=owner; Height=32; Dock=DockStyle.Top; Padding=new(2); DoubleBuffered=true;
-        var actions=new FlowLayoutPanel { Dock=DockStyle.Right, Width=98, FlowDirection=FlowDirection.LeftToRight, WrapContents=false, BackColor=Color.Transparent, Padding=new(0,1,0,0) };
         minimize=new WindowCaptionButton(CaptionAction.Minimize,owner.MinimizeWindow);
         maximize=new WindowCaptionButton(CaptionAction.Maximize,owner.ToggleMaximize);
         var close=new WindowCaptionButton(CaptionAction.Close,owner.Close);
@@ -134,7 +134,7 @@ public sealed class RetroTitleBar : Panel
         caption.MouseDown+=DragDown; caption.MouseMove+=DragMove; caption.MouseUp+=(_,_)=>caption.Capture=false;
         caption.DoubleClick+=(_,_)=> { if(owner.MaximizeBox)owner.ToggleMaximize(); };
     }
-    public void Sync() { minimize.Visible=owner.MinimizeBox; maximize.Visible=owner.MaximizeBox; }
+    public void Sync() { minimize.Visible=owner.MinimizeBox; maximize.Visible=owner.MaximizeBox; actions.Width=LogicalToDeviceUnits(4+30*(1+(owner.MinimizeBox?1:0)+(owner.MaximizeBox?1:0))); }
     private void DragDown(object? sender,MouseEventArgs e)
     {
         if(e.Button!=MouseButtons.Left)return;
@@ -271,12 +271,63 @@ public sealed class PixelPortrait : Control
 public sealed class GuideControl : UserControl
 {
     private readonly Image? portrait=Artwork.Guide();
-    private string speech="Hover an app to learn more! Keyboard focus works too.";
+    private Image? prop;
+    private readonly System.Windows.Forms.Timer animation=new() { Interval=40 };
+    private readonly System.Diagnostics.Stopwatch clock=new();
+    private readonly ContextMenuStrip menu=new();
+    private string speech="Hover an app to learn more. Drag me to move me!",activity="welcome";
+    private bool paused,dragging,moved; private Point mouseStart,locationStart;
+    [System.ComponentModel.Browsable(false)]
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool HasCustomPosition=>moved;
+    public event EventHandler? HomeRequested;
     public GuideControl()
     {
         SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.Opaque,true);
-        Height=315; Width=230; TabStop=false; AccessibleRole=AccessibleRole.StaticText;
+        Height=315; Width=230; TabStop=true; AccessibleRole=AccessibleRole.Pane;
+        AccessibleDescription="Dream guide. Drag to move, Control plus arrow keys to reposition, Control plus Home to return home, Space to pause motion. Right-click for guide controls.";
+        Cursor=Cursors.SizeAll;
+        var pause=new ToolStripMenuItem("Pause animations") { CheckOnClick=true };
+        pause.CheckedChanged+=(_,_)=> { paused=pause.Checked; if(paused)animation.Stop(); else { clock.Restart(); animation.Start(); } Invalidate(); };
+        menu.BackColor=Theme.Cream; menu.Font=new("Tahoma",9);
+        menu.Items.Add(pause); menu.Items.Add("Return guide home",null,(_,_)=>ResetHome()); ContextMenuStrip=menu;
+        animation.Tick+=(_,_)=> { if(clock.Elapsed.TotalSeconds>=3) { animation.Stop(); } Invalidate(); };
+        KeyDown+=(_,e)=>
+        {
+            if(e.Control&&e.KeyCode==Keys.Home) { ResetHome(); e.SuppressKeyPress=true; }
+            else if(e.KeyCode==Keys.Space) { pause.Checked=!pause.Checked; e.SuppressKeyPress=true; }
+            else if(e.Control&&e.KeyCode is Keys.Left or Keys.Right or Keys.Up or Keys.Down)
+            {
+                int d=LogicalToDeviceUnits(8); var delta=e.KeyCode switch { Keys.Left=>new Point(-d,0),Keys.Right=>new Point(d,0),Keys.Up=>new Point(0,-d),_=>new Point(0,d) };
+                moved=true; MoveTo(new(Left+delta.X,Top+delta.Y)); e.SuppressKeyPress=true;
+            }
+        };
     }
+    public void PlaceHome(Point point,int height)
+    {
+        Height=height;
+        if(!moved)Location=point; else MoveTo(Location);
+    }
+    public void ResetHome() { moved=false; HomeRequested?.Invoke(this,EventArgs.Empty); }
+    private void MoveTo(Point point)
+    {
+        if(Parent is null)return;
+        Location=new(Math.Clamp(point.X,0,Math.Max(0,Parent.ClientSize.Width-Width)),Math.Clamp(point.Y,0,Math.Max(0,Parent.ClientSize.Height-Height))); BringToFront();
+    }
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e); if(e.Button!=MouseButtons.Left)return;
+        Focus(); dragging=true; Capture=true; mouseStart=Cursor.Position; locationStart=Location; BringToFront();
+    }
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e); if(!dragging)return;
+        var delta=new Size(Cursor.Position.X-mouseStart.X,Cursor.Position.Y-mouseStart.Y);
+        if(Math.Abs(delta.Width)+Math.Abs(delta.Height)>3)moved=true;
+        MoveTo(new(locationStart.X+delta.Width,locationStart.Y+delta.Height));
+    }
+    protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); dragging=false; Capture=false; }
+    protected override void OnMouseCaptureChanged(EventArgs e) { base.OnMouseCaptureChanged(e); if(!Capture)dragging=false; }
     protected override void OnPaintBackground(PaintEventArgs e) { }
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -288,17 +339,39 @@ public sealed class GuideControl : UserControl
         var tail=new[]{new Point(Width/2-8,bubble.Bottom),new Point(Width/2,bubble.Bottom+9),new Point(Width/2+8,bubble.Bottom)};
         g.FillPolygon(fill,tail); g.DrawLines(edge,tail);
         using var tagFont=new Font("Tahoma",8,FontStyle.Bold); using var copyFont=new Font("Tahoma",9.5f);
-        TextRenderer.DrawText(g,"YOUR DREAM GUIDE",tagFont,new Rectangle(12,12,Width-24,(int)(18*scale)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter);
+        TextRenderer.DrawText(g,"YOUR DREAM GUIDE · DRAG ME",tagFont,new Rectangle(12,12,Width-24,(int)(18*scale)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter|TextFormatFlags.EndEllipsis);
         TextRenderer.DrawText(g,speech,copyFont,new Rectangle(14,(int)(36*scale),Width-28,bubble.Height-(int)(43*scale)),Theme.Ink,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
+        var frame=DreamOS.Core.GuideAnimation.Sample(activity,clock.Elapsed.TotalSeconds,paused||!animation.Enabled);
         if(portrait is not null)
         {
-            var source=new Rectangle(158,80,302,481); int height=Math.Max(1,Height-bubble.Bottom-(int)(20*scale)),width=(int)(height*302f/481f);
+            var source=new Rectangle(158,80,302,481); int height=Math.Max(1,Height-bubble.Bottom-(int)(31*scale)),width=(int)(height*302f/481f);
             using var shadow=new SolidBrush(Color.FromArgb(30,92,65,110)); g.FillEllipse(shadow,Width/2-width/2,Height-12,width,9);
+            var state=g.Save(); float cx=Width/2f+(float)frame.X*scale,cy=bubble.Bottom+18*scale+height/2f+(float)frame.Y*scale;
+            g.TranslateTransform(cx,cy); g.RotateTransform((float)frame.Rotation);
             g.InterpolationMode=InterpolationMode.NearestNeighbor; g.PixelOffsetMode=PixelOffsetMode.Half;
-            g.DrawImage(portrait,new Rectangle((Width-width)/2,bubble.Bottom+(int)(14*scale),width,height),source,GraphicsUnit.Pixel);
+            g.DrawImage(portrait,new Rectangle(-width/2,-height/2,width,height),source,GraphicsUnit.Pixel); g.Restore(state);
+            if(frame.Effect!="idle"&&prop is not null)
+            {
+                int size=(int)(34*scale),x=(int)(Width/2f+width/2f-6*scale),y=(int)(cy-12*scale+frame.PropY*scale);
+                g.InterpolationMode=InterpolationMode.NearestNeighbor; g.DrawImage(prop,new Rectangle(x,y,size,size));
+                if(frame.Effect=="lucky")
+                {
+                    using var ink=new SolidBrush(Theme.Accent);
+                    for(int i=0;i<3;i++)g.FillEllipse(ink,Width/2-width/2-12+i*13,(int)(cy-height/2+frame.PropY)-8,7,7);
+                }
+            }
         }
+        if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(g,Rectangle.Inflate(ClientRectangle,-3,-3));
     }
     public void Say(string text) { speech=text; AccessibleName="Guide: "+text; Invalidate(); if(IsHandleCreated)AccessibilityNotifyClients(AccessibleEvents.NameChange,-1); }
-    public void Register(Control control,string text) { control.MouseEnter+=(_,_)=>Say(text); control.Enter+=(_,_)=>Say(text); }
-    protected override void Dispose(bool disposing) { if(disposing)portrait?.Dispose(); base.Dispose(disposing); }
+    public void React(string app,string text)
+    {
+        Say(text); if(moved)BringToFront();
+        if(activity!=app||!animation.Enabled)
+        {
+            activity=app; prop?.Dispose(); prop=Artwork.Icon(app,42); clock.Restart(); if(!paused)animation.Start();
+        }
+    }
+    public void Register(Control control,string text,string app="welcome") { control.MouseEnter+=(_,_)=>React(app,text); control.Enter+=(_,_)=>React(app,text); }
+    protected override void Dispose(bool disposing) { if(disposing) { animation.Dispose(); menu.Dispose(); portrait?.Dispose(); prop?.Dispose(); } base.Dispose(disposing); }
 }

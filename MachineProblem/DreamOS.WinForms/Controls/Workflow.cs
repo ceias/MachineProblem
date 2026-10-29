@@ -17,9 +17,12 @@ public static class WorkflowUi
     public static FlowLayoutPanel Stack()=>new() { Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new(12),Margin=new(0),BackColor=Theme.Cream };
     public static Panel Section(string title,Control content)
     {
-        var panel=new Panel { Dock=DockStyle.Fill,Padding=new(10),Margin=new(4),BackColor=Color.FromArgb(255,248,245) };
-        var label=Text(title,10,true); label.Dock=DockStyle.Top; label.Height=26; label.AutoSize=false;
-        content.Dock=DockStyle.Fill; panel.Controls.Add(content); panel.Controls.Add(label); return panel;
+        var panel=new IconCardPanel { Dock=DockStyle.Fill,Padding=new(8),Margin=new(4) };
+        var header=new Panel { Dock=DockStyle.Top,Height=26,BackColor=panel.BackColor };
+        var label=Text(title,10,true); label.Dock=DockStyle.Fill; label.AutoSize=false; label.TextAlign=ContentAlignment.MiddleLeft;
+        var icon=CardIcons.Picture(CardIcons.For(title),24); icon.Dock=DockStyle.Left; icon.Width=32;
+        header.Controls.Add(label); header.Controls.Add(icon);
+        content.Dock=DockStyle.Fill; content.BackColor=panel.BackColor; panel.Controls.Add(content); panel.Controls.Add(header); return panel;
     }
     public static void Field(FlowLayoutPanel target,string label,Control input)
     {
@@ -40,9 +43,12 @@ public class WorkflowForm : RetroForm
     protected WorkflowForm(string title,string subtitle) : base(title)
     {
         MinimumSize=new(820,510); Size=new(1060,620);
-        var header=new Panel { Dock=DockStyle.Top,Height=62,Padding=new(15,8,15,2),BackColor=Theme.Cream };
+        var header=new IconCardPanel { Dock=DockStyle.Top,Height=66,Padding=new(12,5,12,4),Margin=new(0) };
+        var text=new Panel { Dock=DockStyle.Fill,BackColor=header.BackColor };
         var heading=WorkflowUi.Text(title,16,true); heading.Dock=DockStyle.Top; heading.AutoSize=false; heading.Height=27; heading.ForeColor=Theme.Accent;
-        hint.Text=subtitle; header.Controls.Add(hint); header.Controls.Add(heading);
+        hint.Text=subtitle; text.Controls.Add(hint); text.Controls.Add(heading);
+        var icon=CardIcons.Picture(CardIcons.For(title),42); icon.Dock=DockStyle.Left; icon.Width=56;
+        header.Controls.Add(text); header.Controls.Add(icon);
         Controls.Add(Workspace); Controls.Add(commands); Controls.Add(header);
     }
     protected void Split(Control main,Control side,int sideWidth=280)
@@ -104,7 +110,7 @@ public static class WorkflowArt
 
 public sealed class ReceiptPanel : UserControl
 {
-    private readonly ReceiptPaper paper=new() { Location=new(5,5),Width=250 };
+    private readonly BrandedReceiptView paper=new() { Location=new(5,5),Width=250 };
     private readonly Panel scroll=new() { Dock=DockStyle.Fill,AutoScroll=true,BackColor=Color.FromArgb(238,221,232) };
     private readonly Button save,print;
     private readonly Label summary=new() { Dock=DockStyle.Bottom,Height=62,BackColor=Color.FromArgb(255,248,245),ForeColor=Theme.Accent,TextAlign=ContentAlignment.MiddleCenter,Font=new("Consolas",14,FontStyle.Bold),AutoEllipsis=true,Padding=new(4) };
@@ -123,71 +129,45 @@ public sealed class ReceiptPanel : UserControl
     private void Save()
     {
         if(document is null)return;
-        using var dialog=new SaveFileDialog { Filter="Text receipt (*.txt)|*.txt",FileName=document.Reference+".txt",OverwritePrompt=true };
-        if(dialog.ShowDialog(this)==DialogResult.OK)File.WriteAllText(dialog.FileName,document.ToText());
+        using var dialog=new SaveFileDialog { Filter="Dream OS receipt image (*.png)|*.png|Text receipt (*.txt)|*.txt",FileName=document.Reference,DefaultExt="png",AddExtension=true,OverwritePrompt=true };
+        if(dialog.ShowDialog(this)==DialogResult.OK)
+        {
+            if(dialog.FilterIndex==2)File.WriteAllText(dialog.FileName,document.ToText());
+            else { using var image=ReceiptDesign.Image(document); image.Save(dialog.FileName,System.Drawing.Imaging.ImageFormat.Png); }
+        }
     }
     private void Print()
     {
         if(document is null)return;
         if(PrinterSettings.InstalledPrinters.Count==0)throw new InvalidOperationException("No printer is installed. Use Save slip, or configure a printer/PDF printer in Windows.");
-        string remaining=document.ToText(); using var job=new PrintDocument { DocumentName=document.Title };
-        using var font=new Font("Consolas",10);
+        var current=document; int first=0,page=1;
+        using var job=new PrintDocument { DocumentName=current.Title };
+        job.DefaultPageSettings.Margins=new Margins(35,35,35,35);
+        job.BeginPrint+=(_,_)=> { first=0; page=1; };
         job.PrintPage+=(_,e)=>
         {
             if(e.Graphics is null)return;
-            e.Graphics.MeasureString(remaining,font,e.MarginBounds.Size,StringFormat.GenericTypographic,out int chars,out int lines);
-            if(chars==0)throw new InvalidOperationException("Printer margins leave no room for the receipt.");
-            e.Graphics.DrawString(remaining[..chars],font,Brushes.Black,e.MarginBounds,StringFormat.GenericTypographic); remaining=remaining[chars..]; e.HasMorePages=remaining.Length>0;
+            var g=e.Graphics; var state=g.Save();
+            try
+            {
+                g.PageUnit=GraphicsUnit.Pixel;
+                float px=g.DpiX/100f,py=g.DpiY/100f;
+                float width=Math.Min(e.MarginBounds.Width*px,g.DpiX*3.15f),scale=width/ReceiptDesign.Width;
+                if(scale<=0)throw new InvalidOperationException("Printer margins leave no room for the receipt.");
+                float height=e.MarginBounds.Height*py/scale;
+                g.TranslateTransform(e.MarginBounds.Left*px+(e.MarginBounds.Width*px-width)/2,e.MarginBounds.Top*py);
+                g.ScaleTransform(scale,scale);
+                var rows=ReceiptDesign.Layout(g,current);
+                var plan=ReceiptPagination.Plan(rows.Count-first,height,ReceiptDesign.Header,ReceiptDesign.Row,ReceiptDesign.Footer,ReceiptDesign.ContinuedFooter);
+                ReceiptDesign.Draw(g,current,rows,first,plan.Count,plan.Final,page++);
+                first+=plan.Count; e.HasMorePages=!plan.Final;
+            }
+            finally { g.Restore(state); }
         };
         using var dialog=new PrintDialog { Document=job,UseEXDialog=true }; if(dialog.ShowDialog(this)==DialogResult.OK)
         {
             try { job.Print(); }
             catch(InvalidPrinterException e) { throw new InvalidOperationException("The selected printer is unavailable. Use Save slip or select another printer.",e); }
         }
-    }
-    private sealed class ReceiptPaper : Control
-    {
-        private ReceiptData? document; private string empty="";
-        private readonly Image? icon=WorkflowArt.Sprite(29);
-        public ReceiptPaper() { DoubleBuffered=true; BackColor=Color.FromArgb(255,253,247); Font=new("Tahoma",9); }
-        public void SetDocument(ReceiptData? value,string message) { document=value; empty=message; Reflow(); Invalidate(); }
-        private int RowHeight(ReceiptEntry row)
-        {
-            int inside=Math.Max(80,Width-LogicalToDeviceUnits(32)),w=inside*58/100;
-            int label=TextRenderer.MeasureText(row.Label,Font,new Size(w,int.MaxValue),TextFormatFlags.WordBreak|TextFormatFlags.NoPadding).Height;
-            int value=TextRenderer.MeasureText(row.Value,Font,new Size(inside-w,int.MaxValue),TextFormatFlags.WordBreak|TextFormatFlags.NoPadding).Height;
-            return Math.Max(LogicalToDeviceUnits(26),Math.Max(label,value)+LogicalToDeviceUnits(8));
-        }
-        public void Reflow() { Height=document is null?LogicalToDeviceUnits(280):LogicalToDeviceUnits(326)+document.Entries.Sum(RowHeight); Invalidate(); }
-        protected override void OnDpiChangedAfterParent(EventArgs e) { base.OnDpiChangedAfterParent(e); Reflow(); }
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e); var g=e.Graphics; int S(int value)=>LogicalToDeviceUnits(value);
-            using var ink=new SolidBrush(Theme.Ink); using var muted=new SolidBrush(Color.FromArgb(128,104,121));
-            using var head=new Font("Consolas",16,FontStyle.Bold); using var bold=new Font("Tahoma",10,FontStyle.Bold); using var small=new Font("Tahoma",8);
-            if(document is null)
-            {
-                if(icon is not null) { g.InterpolationMode=InterpolationMode.NearestNeighbor; g.DrawImage(icon,new Rectangle(Width/2-S(45),S(24),S(90),S(90))); }
-                TextRenderer.DrawText(g,"YOUR RECEIPT",bold,new Rectangle(S(12),S(134),Width-S(24),S(24)),Theme.Accent,TextFormatFlags.HorizontalCenter);
-                TextRenderer.DrawText(g,empty,Font,new Rectangle(S(18),S(173),Width-S(36),S(80)),Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak); return;
-            }
-            int margin=S(16),inside=Width-margin*2;
-            g.DrawString("DREAM OS",head,ink,margin,S(17)); g.DrawString(document.Title,bold,ink,new RectangleF(margin,S(47),inside,S(40)));
-            g.DrawString(document.Reference,small,muted,new RectangleF(margin,S(89),inside,S(32))); g.DrawString(document.Issued.ToString("dd MMM yyyy · HH:mm"),small,muted,margin,S(120));
-            using var dash=new Pen(Color.FromArgb(194,171,183)) { DashStyle=DashStyle.Dash }; int y=S(147); g.DrawLine(dash,S(14),y,Width-S(14),y); y+=S(12);
-            foreach(var row in document.Entries)
-            {
-                int height=RowHeight(row),leftWidth=inside*58/100;
-                TextRenderer.DrawText(g,row.Label,Font,new Rectangle(margin,y,leftWidth,height),Theme.Ink,TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
-                TextRenderer.DrawText(g,row.Value,Font,new Rectangle(margin+leftWidth,y,inside-leftWidth,height),Theme.Ink,TextFormatFlags.Right|TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
-                y+=height;
-            }
-            g.DrawLine(dash,S(14),y,Width-S(14),y); y+=S(12);
-            g.DrawString(document.TotalLabel,bold,muted,margin,y); y+=S(25);
-            using var total=new Font("Consolas",19,FontStyle.Bold); g.DrawString(document.Total,total,ink,new RectangleF(margin,y,inside,S(40))); y+=S(47);
-            TextRenderer.DrawText(g,document.Footer,small,new Rectangle(margin,y,inside,S(55)),Theme.Accent,TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
-            for(int x=0;x<Width;x+=S(12))g.FillPolygon(Brushes.White,[new Point(x,Height),new Point(x+S(6),Height-S(6)),new Point(x+S(12),Height)]);
-        }
-        protected override void Dispose(bool disposing) { if(disposing)icon?.Dispose(); base.Dispose(disposing); }
     }
 }

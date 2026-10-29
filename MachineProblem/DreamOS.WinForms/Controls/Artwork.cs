@@ -25,6 +25,21 @@ public static class Artwork
     }
     public static Bitmap? Icon(string id, int size = 40)
     {
+        if(id is "password" or "election")
+        {
+            var icon=new Bitmap(size,size,PixelFormat.Format32bppArgb); using var canvas=Graphics.FromImage(icon); canvas.ScaleTransform(size/32f,size/32f);
+            using var fill=new SolidBrush(Color.FromArgb(255,239,246)); using var edge=new Pen(Color.FromArgb(113,91,137),1.5f); using var pink=new Pen(Theme.Accent,2);
+            if(id=="password")
+            {
+                canvas.DrawArc(edge,9,3,14,18,180,180); canvas.FillRectangle(fill,6,13,20,16); canvas.DrawRectangle(edge,6,13,20,16); canvas.DrawEllipse(pink,14,18,4,4); canvas.DrawLine(pink,16,22,16,25);
+            }
+            else
+            {
+                canvas.FillRectangle(fill,4,15,24,14); canvas.DrawRectangle(edge,4,15,24,14); canvas.DrawLine(edge,11,19,23,19);
+                canvas.FillRectangle(Brushes.White,10,2,15,18); canvas.DrawRectangle(edge,10,2,15,18); canvas.DrawLines(pink,[new Point(13,10),new Point(16,13),new Point(22,6)]);
+            }
+            return icon;
+        }
         (string File, Rectangle Region) part = id switch
         {
             "pizza" => ("Pizza.png", new(20, 46, 57, 59)),

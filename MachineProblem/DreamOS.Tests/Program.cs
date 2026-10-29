@@ -104,6 +104,43 @@ Check("Receipt references are unique and filename safe",()=>
     if(references.Any(r=>r.Any(c=>!(char.IsAsciiLetterOrDigit(c)||c=='-'))))throw new Exception("Unsafe reference");
 });
 
+Check("Guide activities have distinct motion styles",()=>
+{
+    var styles=GuideAnimation.Activities.Select(id=>GuideAnimation.Sample(id,.8).Effect).ToArray(); Equal(styles.Length,styles.Distinct().Count());
+});
+Check("Guide motion stays bounded for every activity",()=>
+{
+    foreach(var id in GuideAnimation.Activities)for(int i=0;i<=300;i++)
+    {
+        var frame=GuideAnimation.Sample(id,i/100d);
+        if(!double.IsFinite(frame.X+frame.Y+frame.Rotation+frame.PropY)||Math.Abs(frame.X)>8.01||Math.Abs(frame.Y)>13.01||Math.Abs(frame.Rotation)>8.01||Math.Abs(frame.PropY)>24.01)throw new Exception("Unsafe guide bounds: "+id);
+    }
+});
+Check("Guide paused and completed states stop all movement",()=>
+{
+    foreach(var id in GuideAnimation.Activities)
+    {
+        Equal(new GuideFrame(0,0,0,0,"idle"),GuideAnimation.Sample(id,1,true));
+        Equal(new GuideFrame(0,0,0,0,"idle"),GuideAnimation.Sample(id,3));
+    }
+});
+Check("Receipt pagination retains every visual row and terminates",()=>
+{
+    foreach(int total in new[]{0,1,12,40,200})
+    {
+        int first=0,pages=0;
+        while(true)
+        {
+            var page=ReceiptPagination.Plan(total-first,700,218,20,206,44); first+=page.Count;
+            if(++pages>201)throw new Exception("Pagination failed to terminate");
+            if(page.Final)break;
+            if(page.Count<=0)throw new Exception("Empty continuation page");
+        }
+        Equal(total,first);
+    }
+});
+Check("Receipt rejects printer areas too small for a readable page",()=>Reject(()=>ReceiptPagination.Plan(10,200,218,20,206,44)));
+
 string temp = Path.Combine(Path.GetTempPath(),"dreamos-tests-"+Guid.NewGuid().ToString("N"));
 try
 {

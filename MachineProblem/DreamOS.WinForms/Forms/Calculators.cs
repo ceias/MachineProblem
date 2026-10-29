@@ -64,7 +64,7 @@ public sealed class LottoForm : WorkflowForm
         var chips=new FlowLayoutPanel { AutoSize=true,WrapContents=false }; foreach(int value in new[]{10,20,50,100})chips.Controls.Add(Theme.Button($"PHP {value}",()=>bet.Value=value)); main.Controls.Add(chips);
         main.Controls.Add(WorkflowUi.Text("03 · Winning numbers",12,true)); winners.Size=new(410,85); main.Controls.Add(winners);
         var rules=WorkflowUi.Text("Exact order: fictional PHP 1,000,000 jackpot.\nSame digits, different order: demo bet × 1,000.\nEvery draw uses three different digits.",9); main.Controls.Add(rules);
-        bet.ValueChanged+=(_,_)=>receipt.Clear(); Split(main,receipt);
+        bet.ValueChanged+=(_,_)=>receipt.Clear(); Split(WorkflowUi.Section("Your demo ticket",main),receipt);
         Command("Draw numbers",Draw); Command("New ticket",()=> { for(int i=0;i<3;i++)digits[i].Value=i; bet.Value=10; winners.Clear(); receipt.Clear(); }); Command("Close",Close);
     }
     private void Draw()
@@ -103,7 +103,7 @@ public sealed class TuitionForm : WorkflowForm
         var fees=new DataGridView { Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,RowHeadersVisible=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White,BorderStyle=BorderStyle.FixedSingle };
         fees.Columns.Add("year","Year level"); fees.Columns.Add("it","BSIT / BSCS"); fees.Columns.Add("other","BSA / BSN");
         foreach(var y in Enum.GetValues<YearLevel>())fees.Rows.Add(y,Money.Format(new TuitionService().Calculate(Course.BSIT,y,3,0).Miscellaneous),Money.Format(new TuitionService().Calculate(Course.BSA,y,3,0).Miscellaneous));
-        grid.Controls.Add(fees,0,1); grid.SetColumnSpan(fees,2); Split(grid,receipt);
+        grid.Controls.Add(WorkflowUi.Section("Fee schedule",fees),0,1); grid.SetColumnSpan(fees,2); Split(grid,receipt);
         course.SelectedIndexChanged+=(_,_)=>receipt.Clear(); year.SelectedIndexChanged+=(_,_)=>receipt.Clear(); units.ValueChanged+=(_,_)=>receipt.Clear(); labs.ValueChanged+=(_,_)=>receipt.Clear(); student.TextChanged+=(_,_)=>receipt.Clear();
         Command("Assess fees",Compute); Command("Clear",()=> { student.Clear(); course.SelectedIndex=year.SelectedIndex=-1; units.Value=3; labs.Value=0; receipt.Clear(); }); Command("Close",Close);
     }
@@ -152,7 +152,7 @@ public sealed class HotelForm : WorkflowForm
         var dates=WorkflowUi.Stack(); WorkflowUi.Field(dates,"Check-in",checkIn); WorkflowUi.Field(dates,"Check-out",checkOut); dates.Controls.Add(WorkflowUi.Text("Same-day stays are billed as one day.\nCash 0% · Check +5% · Credit card +10%",9));
         var rooms=WorkflowUi.Stack(); WorkflowUi.Field(rooms,"Room capacity",capacity); WorkflowUi.Field(rooms,"Room category",room);
         var overview=WorkflowUi.Stack(); overview.Controls.Add(WorkflowUi.Text("STAY OVERVIEW",10,true)); overview.Controls.Add(stay); overview.Controls.Add(WorkflowUi.Text("This is a billing estimate.\nRoom inventory and reservations are not tracked.",9));
-        grid.Controls.Add(WorkflowUi.Section("Guest profile",guest),0,0); grid.Controls.Add(WorkflowUi.Section("Dates + duration",dates),1,0); grid.Controls.Add(WorkflowUi.Section("Room selection",rooms),0,1); grid.Controls.Add(overview,1,1); Split(grid,receipt);
+        grid.Controls.Add(WorkflowUi.Section("Guest profile",guest),0,0); grid.Controls.Add(WorkflowUi.Section("Dates + duration",dates),1,0); grid.Controls.Add(WorkflowUi.Section("Room selection",rooms),0,1); grid.Controls.Add(WorkflowUi.Section("Stay estimate",overview),1,1); Split(grid,receipt);
         checkOut.Value=DateTime.Today.AddDays(1);
         foreach(var c in new[]{capacity,room,payment})c.SelectedIndexChanged+=(_,_)=>Changed(); checkIn.ValueChanged+=(_,_)=> { checkOut.MinDate=checkIn.Value.Date; Changed(); }; checkOut.ValueChanged+=(_,_)=>Changed(); customer.TextChanged+=(_,_)=>receipt.Clear(); contact.TextChanged+=(_,_)=>receipt.Clear();
         Command("Create guest folio",Compute); Command("New guest",()=> { customer.Clear(); contact.Clear(); capacity.SelectedIndex=room.SelectedIndex=payment.SelectedIndex=-1; checkIn.Value=DateTime.Today; checkOut.Value=DateTime.Today.AddDays(1); Changed(); }); Command("Close",Close);

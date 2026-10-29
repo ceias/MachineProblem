@@ -20,7 +20,7 @@ public sealed class WidgetsForm : WorkflowForm
         reminder.Controls.Add(Theme.Button("Set reminder",()=> { remindAt=DateTime.Now.AddMinutes((double)delay.Value); reminderStatus.Text=$"Scheduled for {remindAt:t}.\nKeep this window open."; }));
         reminder.Controls.Add(Theme.Button("Cancel reminder",()=> { remindAt=null; reminderStatus.Text="Reminder cancelled."; })); reminder.Controls.Add(reminderStatus);
         calendarGrid.Controls.Add(WorkflowUi.Section("Your day",calendarBody),0,0); calendarGrid.Controls.Add(WorkflowUi.Section("A little nudge",reminder),1,0); calendarTab.Controls.Add(calendarGrid);
-        var notesTab=new TabPage("Notes") { BackColor=Theme.Cream }; var paper=new Panel { Dock=DockStyle.Fill,Padding=new(14) }; paper.Controls.Add(notes); notesTab.Controls.Add(paper);
+        var notesTab=new TabPage("Notes") { BackColor=Theme.Cream }; var paper=new Panel { Dock=DockStyle.Fill,Padding=new(14) }; paper.Controls.Add(notes); notesTab.Controls.Add(WorkflowUi.Section("Your notepad",paper));
         Theme.Guard(this,()=>notes.Text=LocalData.Store("notes",()=>new NoteState()).Load().Text);
         notes.TextChanged+=(_,_)=> { dirty=true; Status("Notes changed. Save before closing to keep them on your desktop."); };
         var musicTab=new TabPage("Music") { BackColor=Theme.Cream }; var media=WorkflowUi.Stack();
@@ -29,11 +29,11 @@ public sealed class WidgetsForm : WorkflowForm
         var transport=new FlowLayoutPanel { AutoSize=true,WrapContents=false };
         transport.Controls.Add(Theme.Button("Play",()=>Run(()=> { RequireTrack(); player.Play(); Status("Playing "+track.Text); })));
         transport.Controls.Add(Theme.Button("Loop",()=>Run(()=> { RequireTrack(); player.PlayLooping(); Status("Looping "+track.Text); })));
-        transport.Controls.Add(Theme.Button("Stop",()=> { player.Stop(); Status("Playback stopped."); })); media.Controls.Add(transport); musicTab.Controls.Add(media);
+        transport.Controls.Add(Theme.Button("Stop",()=> { player.Stop(); Status("Playback stopped."); })); media.Controls.Add(transport); musicTab.Controls.Add(WorkflowUi.Section("Your listening corner",media));
         tabs.TabPages.AddRange([calendarTab,notesTab,musicTab]); Workspace.Controls.Add(tabs); SelectPage(initialPage);
         Command("Save notes",()=> { if(SaveNotes())Status("Notes saved. The desktop preview is updated."); }); Command("Close",Close);
         clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); if(remindAt is DateTime due&&DateTime.Now>=due) { remindAt=null; reminderStatus.Text="Reminder delivered."; notify(message.Text); } }; timer.Start();
-        FormClosing+=(_,e)=> { if(!dirty)return; var answer=MessageBox.Show(this,"Save your notes before closing?","Notes",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question); if(answer==DialogResult.Cancel)e.Cancel=true; if(answer==DialogResult.Yes&&!SaveNotes())e.Cancel=true; };
+        FormClosing+=(_,e)=> { if(!dirty)return; var answer=DreamDialog.Show(this,"Save your notes before closing?","Notes",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question); if(answer==DialogResult.Cancel)e.Cancel=true; if(answer==DialogResult.Yes&&!SaveNotes())e.Cancel=true; };
     }
     public void SelectPage(string name) { foreach(TabPage page in tabs.TabPages)if(page.Text==name) { tabs.SelectedTab=page; return; } }
     private void RequireTrack() { if(string.IsNullOrEmpty(player.SoundLocation))throw new ArgumentException("Choose a WAV file first."); }

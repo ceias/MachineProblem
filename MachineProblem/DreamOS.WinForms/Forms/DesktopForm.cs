@@ -1,7 +1,7 @@
 using DreamOS.WinForms.Controls;
 namespace DreamOS.WinForms.Forms;
 
-public sealed class DesktopForm : RetroForm
+public sealed class DesktopForm : RetroForm,IDialogGuideHost
 {
     private sealed record AppInfo(string Id,string Title,string Help,Func<Form> Create);
     private readonly Dictionary<string,Form> windows=[];
@@ -36,8 +36,8 @@ public sealed class DesktopForm : RetroForm
         foreach(var app in apps)
         {
             var shortcut=new DesktopShortcutButton { Text=app.Title, Size=new(108,104), Margin=new(4), Image=Artwork.Icon(app.Id,64), AccessibleDescription=app.Help, AccessibleName=app.Title };
-            shortcut.Click+=(_,_)=>Open(app); guide.Register(shortcut,app.Help); shortcuts.Controls.Add(shortcut);
-            var menuImage=Artwork.Icon(app.Id,24); var item=startMenu.Items.Add(app.Title,menuImage,(_,_)=>Open(app)); item.MouseEnter+=(_,_)=>guide.Say(app.Help);
+            shortcut.Click+=(_,_)=>Open(app); guide.Register(shortcut,app.Help,app.Id); shortcuts.Controls.Add(shortcut);
+            var menuImage=Artwork.Icon(app.Id,24); var item=startMenu.Items.Add(app.Title,menuImage,(_,_)=>Open(app)); item.MouseEnter+=(_,_)=>guide.React(app.Id,app.Help);
         }
         startMenu.Items.Add(new ToolStripSeparator());
         startMenu.Items.Add("Cascade windows",null,(_,_)=>ArrangeWindows(false)); startMenu.Items.Add("Tile windows",null,(_,_)=>ArrangeWindows(true));
@@ -54,10 +54,12 @@ public sealed class DesktopForm : RetroForm
             int margin=LogicalToDeviceUnits(18);
             calendar.Location=new(Math.Max(0,workspace.Width-calendar.Width-margin),LogicalToDeviceUnits(16));
             widgetDock.Location=new(calendar.Left,calendar.Bottom+LogicalToDeviceUnits(7));
-            guide.Height=Math.Max(LogicalToDeviceUnits(160),Math.Min(LogicalToDeviceUnits(315),workspace.Height-widgetDock.Bottom-margin-LogicalToDeviceUnits(8)));
-            guide.Location=new(Math.Max(0,workspace.Width-guide.Width-margin),Math.Max(widgetDock.Bottom+LogicalToDeviceUnits(8),workspace.Height-guide.Height-margin));
+            int height=Math.Max(LogicalToDeviceUnits(160),Math.Min(LogicalToDeviceUnits(315),workspace.Height-widgetDock.Bottom-margin-LogicalToDeviceUnits(8)));
+            guide.PlaceHome(new(Math.Max(0,workspace.Width-guide.Width-margin),Math.Max(widgetDock.Bottom+LogicalToDeviceUnits(8),workspace.Height-height-margin)),height);
             shortcuts.Height=Math.Max(180,workspace.Height-LogicalToDeviceUnits(32));
         }
+        guide.HomeRequested+=(_,_)=>LayoutDesktop();
+        startMenu.Items.Add("Return guide home",null,(_,_)=>guide.ResetHome());
         workspace.Resize+=(_,_)=>LayoutDesktop();
         Shown+=(_,_)=>LayoutDesktop();
         clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); calendar.Invalidate(); }; timer.Start();
@@ -82,7 +84,7 @@ public sealed class DesktopForm : RetroForm
         window.Location=new(x,Math.Max(5,(workspace.Height-window.Height)/2));
         windows.Add(app.Id,window);
         var task=Theme.Button(app.Title,()=>Restore(window)); task.AutoSize=false; task.MinimumSize=Size.Empty; task.Size=new(LogicalToDeviceUnits(172),LogicalToDeviceUnits(34)); task.Margin=new(3,2,3,2); task.Font=new("Tahoma",9); task.Image=Artwork.Icon(app.Id,24); task.BackColor=Theme.Cream; tasks.Add(app.Id,task); taskbar.Controls.Add(task);
-        guide.Register(task,app.Help); RegisterHelp(window,app.Help);
+        guide.Register(task,app.Help,app.Id); RegisterHelp(window,app.Help,app.Id);
         window.Enter+=(_,_)=>Highlight(app.Id);
         window.VisibleChanged+=(_,_)=> { if(!window.Visible)task.BackColor=Theme.Cream; };
         window.FormClosed+=(_,_)=> { windows.Remove(app.Id); tasks.Remove(app.Id); taskbar.Controls.Remove(task); task.Dispose(); workspace.Controls.Remove(window); window.Dispose(); };
@@ -95,12 +97,12 @@ public sealed class DesktopForm : RetroForm
             window.Size=new(Math.Min(window.Width,width),Math.Min(window.Height,height));
             window.Location=new(LogicalToDeviceUnits(12),Math.Max(4,(workspace.Height-window.Height)/2));
         }
-        window.BringToFront(); window.Focus(); Highlight(app.Id); guide.Say(app.Help);
+        window.BringToFront(); window.Focus(); Highlight(app.Id); guide.React(app.Id,app.Help);
     });
     private void Highlight(string id) { foreach(var (key,button) in tasks)button.BackColor=key==id?Theme.Blue:Theme.Cream; }
-    private void RegisterHelp(Control parent,string help)
+    private void RegisterHelp(Control parent,string help,string app)
     {
-        guide.Register(parent,help); foreach(Control child in parent.Controls)RegisterHelp(child,string.IsNullOrWhiteSpace(child.AccessibleName)?help:$"{child.AccessibleName}. {help}");
+        guide.Register(parent,help,app); foreach(Control child in parent.Controls)RegisterHelp(child,string.IsNullOrWhiteSpace(child.AccessibleName)?help:$"{child.AccessibleName}. {help}",app);
     }
     private static void Restore(Form window) { window.Show(); window.BringToFront(); window.Focus(); }
     private void ArrangeWindows(bool tile)
@@ -129,8 +131,9 @@ public sealed class DesktopForm : RetroForm
         if(windows.TryGetValue("widgets",out var window)&&window is WidgetsForm widgets)widgets.SelectPage(page);
     }
     private void OpenStore(string username)=>Open(apps.First(a=>a.Id=="store") with { Create=()=>new StoreForm(username) });
-    private void Notify(string text) { notifications.Add($"{DateTime.Now:t} • {text}"); if(notifications.Count>100)notifications.RemoveAt(0); guide.Say(text); MessageBox.Show(this,text,"Dream OS • reminder",MessageBoxButtons.OK,MessageBoxIcon.Information); }
-    private void ShowNotifications()=>MessageBox.Show(this,notifications.Count==0?"No notifications yet. Schedule one in Desktop Widgets.":string.Join(Environment.NewLine,notifications),"Notifications");
+    public void PresentDialogGuide(string message)=>guide.React("notification",message.Length>180?message[..177]+"…":message);
+    private void Notify(string text) { notifications.Add($"{DateTime.Now:t} • {text}"); if(notifications.Count>100)notifications.RemoveAt(0); guide.React("notification",text); DreamDialog.Show(this,text,"Dream OS • reminder",MessageBoxButtons.OK,MessageBoxIcon.Information); }
+    private void ShowNotifications()=>DreamDialog.Show(this,notifications.Count==0?"No notifications yet. Schedule one in Desktop Widgets.":string.Join(Environment.NewLine,notifications),"Notifications");
     private void Logout() { LogoutRequested=true; Close(); }
     protected override void Dispose(bool disposing)
     {
@@ -156,7 +159,7 @@ internal sealed class WelcomeForm : RetroForm
         var tools=Theme.Button("My widgets",()=> { widgets(); Close(); }); tools.BackColor=Color.FromArgb(215,227,249); tools.Margin=new(0);
         buttons.Controls.Add(start); buttons.Controls.Add(tools); copy.Controls.Add(buttons);
         copy.Controls.Add(new Label { Text="Choose any shortcut to begin.", AutoSize=true, ForeColor=Color.FromArgb(139,118,147), Font=new("Tahoma",8.5f), Margin=new(0,18,0,0) });
-        content.Controls.Add(copy,1,0); Controls.Add(content);
+        content.Controls.Add(copy,1,0); var card=new IconCardPanel { Dock=DockStyle.Fill,Padding=new(8) }; card.Controls.Add(content); Controls.Add(card);
     }
     private sealed class WelcomeArtwork : Panel
     {

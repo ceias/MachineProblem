@@ -82,7 +82,7 @@ Use the existing isolated checkout; no Git worktree is needed. The reusable envi
 
 ## Validation
 
-Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **92 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
+Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **97 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
 
 On Windows, verify this acceptance pass before presentation:
 
@@ -132,3 +132,15 @@ The new 30-sprite atlas is documented in `DreamOS.WinForms/Assets/README.md`. Bo
 Receipt panels support **Save slip** (text) and **Print** (Windows print dialog; use Microsoft Print to PDF if installed). They wrap long names/items, scroll independently, and remain disabled until a current result exists. Payroll and tuition documents are statements, hotel folios are estimates, and lotto/vote slips are explicitly classroom simulations. There is no claim that a real payment or booking occurred.
 
 Run the regression suite with `dotnet run --project DreamOS.Tests -c Release`: it now includes receipt data/export checks in addition to the original formula, validation and persistence tests. Windows visual acceptance and real print/audio device validation remain necessary; a Linux cross-build does not verify actual WinForms rendering.
+
+## Branded receipts, icon cards and interactive guide
+
+All receipt previews, PNG exports and printed pages now share `ReceiptDesign`: a white Dream OS paper slip, pink wordmark, mini pixel-art strip, aligned item/value columns, dashed total divider, decorative barcode-style footer and serrated paper edge. Save slip defaults to a high-resolution PNG; text remains an optional format. Print sends this same styled layout to the Windows printer, centered at up to 3.15 inches wide. Long receipts continue across pages with repeated headers; all rows and the final total are retained. Printer margins/paper selection still depend on the Windows driver. The barcode graphic is decorative and is not a scannable payment code.
+
+`WorkflowForm` banners and input sections use bordered icon cards. Login, welcome, notes/music panels and custom message dialogs use the same card styling. Native file and printer selection dialogs remain the operating system's dialogs.
+
+The guide can be dragged within the desktop workspace. Its dragged position survives window opens and workspace resizing for the current session. Right-click to pause/resume animations or return home; keyboard users can focus the guide, use Control+arrow keys to move, Control+Home to return, and Space to pause/resume. Hovering or focusing an app triggers a short, distinct movement and matching icon prop: pizza toss, lotto hop, study sway, payslip tilt, hotel greeting, ballot wave, password peek, shopping bounce, heart sway or widget dance. Alerts trigger a short notification bounce. These animate the original supplied girl rather than replacing her design.
+
+Notifications, validation errors, vote/reset confirmations, password retry/cancel, author information and unsaved-note prompts use `DreamDialog`. Enter and Escape have explicit button behavior; saving notes remains the default in its Save/No/Cancel prompt. The dialog close button never silently confirms a destructive action.
+
+Validation: both solutions build on .NET 10 with zero warnings/errors; 97 cross-platform checks pass, including bounded/paused guide motion and complete, terminating receipt pagination. Windows visual rendering, guide input interactions, actual printer/PDF-driver output and dialog keyboard behavior still require Windows acceptance testing.

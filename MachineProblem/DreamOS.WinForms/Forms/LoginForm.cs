@@ -12,7 +12,7 @@ public sealed class LoginForm : RetroForm
     {
         MinimumSize=new(480,600); ClientSize=new(550,650); MaximizeBox=false; StartPosition=FormStartPosition.CenterScreen;
         var scene=new LoginScene { Dock=DockStyle.Fill };
-        var card=new Panel { Size=new(350,460), BackColor=Color.Transparent };
+        var card=new IconCardPanel { Size=new(350,460), BackColor=Color.FromArgb(255,239,246) };
         var badge=new HeartBadge { Bounds=new(125,0,100,100) };
         var heading=new Label { Text="DREAM OS", Font=new("Consolas",28,FontStyle.Bold), ForeColor=Color.FromArgb(203,65,116), BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,110,350,48) };
         var subtitle=new Label { Text="Please login to continue…", Font=new("Tahoma",11), ForeColor=Theme.Ink, BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,164,350,25) };
