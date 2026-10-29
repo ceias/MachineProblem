@@ -97,10 +97,18 @@ Windows UI acceptance is **pending**, not claimed as passed by the Linux build o
 
 ## Supplied artwork and interface
 
-The UI uses the original provided PNG artwork rather than a flat placeholder screen. Both entry projects copy the login, desktop, widgets, pizza, lotto, tuition and hotel PNGs plus the original guide JPEG into `Assets`. The supplied mockups are flattened images containing text and fake fields; `Controls/Artwork.cs` selects only decorative regions (clouds, heart badge, computer and app icons). Input fields, menus, title-bar actions and calculations remain real WinForms controls. The original image files are unchanged.
+The UI uses the original provided PNG artwork rather than a flat placeholder screen. Both entry projects copy the login, desktop, widgets, pizza, lotto, tuition and hotel PNGs plus the original guide JPEG into `Assets`. The supplied mockups are flattened images containing text and fake fields; `Controls/Artwork.cs` selects only decorative regions (heart badge, computer and app icons). The continuous sky and cloud banks are drawn in GDI+ instead of stretching strips of the flattened desktop screenshot. Input fields, menus, title-bar actions and calculations remain real WinForms controls. The original image files are unchanged.
 
 The login follows the centered heart/title/input layout. The desktop has cloud wallpaper, pixel shortcuts, a welcome window, a bottom Start/taskbar/clock and the girl with a speech bubble. Shared exercise forms use blue title bars, beveled pink buttons, cream fields, an app illustration and a separate results panel. The guide background is masked during rendering; it no longer appears in an opaque white rectangle.
 
 All app windows consistently use borderless Forms hosted in one workspace Panel, replacing the earlier MDI implementation so their title bars can match the reference artwork. Minimize hides a window until its taskbar button is selected; maximize fills the workspace; restore returns its prior bounds.
 
 Windows visual validation is still required: check the supplied reference crops alongside the running login/desktop, hover and focus guidance, title-bar close/minimize/maximize/restore, window dragging and resizing, logout cancellation with unsaved notes, and layout at 100%, 150% and 200% DPI. Compilation and the core tests do not validate rendered appearance on Linux.
+
+### Desktop rendering refinement
+
+The shortcut buttons and their shelf now paint the cached workspace backdrop at their own coordinates, instead of relying on nested transparent WinForms controls. This addresses the repeated miniature-window backgrounds visible in the earlier Windows screenshot. Labels have separate pale caption strips, predictable icon sizes and keyboard focus outlines.
+
+Caption buttons draw their minimize/maximize/close marks as lines and rectangles, avoiding font clipping and ellipsis. The welcome card has a two-column illustration/content layout, and the right-hand date/time card opens the existing widgets. Taskbar item heights leave room for a horizontal scrollbar when many apps are open. The guide bubble and character paint together over the cached backdrop.
+
+Windows visual acceptance remains pending: specifically inspect shortcut backgrounds after opening/moving/minimizing windows, scrolling the shelf, tabbing through shortcuts, resizing the workspace and changing DPI. Validate caption actions and the calendar-card launch. The Linux build and calculation tests cannot establish that Windows painting matches the design.

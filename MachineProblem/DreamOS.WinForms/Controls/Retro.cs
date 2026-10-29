@@ -35,8 +35,6 @@ public static class Theme
 public class RetroButton : Button
 {
     private bool pressed,hovered;
-    [System.ComponentModel.DefaultValue(false)]
-    public bool DesktopShortcut { get; set; }
     public RetroButton() { FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; DoubleBuffered=true; SetStyle(ControlStyles.SupportsTransparentBackColor,true); }
     protected override void OnMouseEnter(EventArgs e) { hovered=true; Invalidate(); base.OnMouseEnter(e); }
     protected override void OnMouseLeave(EventArgs e) { hovered=false; pressed=false; Invalidate(); base.OnMouseLeave(e); }
@@ -45,27 +43,77 @@ public class RetroButton : Button
     protected override void OnPaint(PaintEventArgs e)
     {
         var g=e.Graphics; var rect=ClientRectangle;
-        if(DesktopShortcut)
-        {
-            if(hovered||Focused) { using var tint=new SolidBrush(Color.FromArgb(100,255,245,253)); g.FillRectangle(tint,rect); }
-            int iconSize=LogicalToDeviceUnits(44), iconTop=LogicalToDeviceUnits(5), textTop=LogicalToDeviceUnits(53);
-            if(Image is not null) { g.InterpolationMode=InterpolationMode.NearestNeighbor; g.DrawImage(Image,new Rectangle((Width-iconSize)/2,iconTop,iconSize,iconSize)); }
-            var label=new Rectangle(3,textTop,Width-6,Math.Max(1,Height-textTop-2));
-            TextRenderer.DrawText(g,Text,Font,new Rectangle(label.X+1,label.Y+1,label.Width,label.Height),Color.White,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak);
-            TextRenderer.DrawText(g,Text,Font,label,Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak);
-        }
-        else
-        {
-            using var fill=new LinearGradientBrush(rect,hovered?Color.White:ControlPaint.Light(BackColor),pressed?Theme.Pink:BackColor,LinearGradientMode.Vertical);
-            g.FillRectangle(fill,rect); Theme.Bevel(g,rect,pressed);
-            if(Image is not null)g.DrawImage(Image,new Rectangle(7,(Height-24)/2,24,24));
-            var textArea=new Rectangle(Image is null?5:35,4,Width-(Image is null?10:40),Height-8);
-            if(pressed)textArea.Offset(1,1);
-            TextRenderer.DrawText(g,Text,Font,textArea,Enabled?ForeColor:SystemColors.GrayText,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);
-        }
+        using var fill=new LinearGradientBrush(rect,hovered?Color.White:ControlPaint.Light(BackColor),pressed?Theme.Pink:BackColor,LinearGradientMode.Vertical);
+        g.FillRectangle(fill,rect); Theme.Bevel(g,rect,pressed);
+        int iconSize=LogicalToDeviceUnits(22), inset=LogicalToDeviceUnits(7);
+        if(Image is not null) { g.InterpolationMode=InterpolationMode.NearestNeighbor; g.DrawImage(Image,new Rectangle(inset,(Height-iconSize)/2,iconSize,iconSize)); }
+        var textArea=new Rectangle(Image is null?inset:iconSize+inset*2,4,Width-(Image is null?inset*2:iconSize+inset*3),Height-8);
+        if(pressed)textArea.Offset(1,1);
+        TextRenderer.DrawText(g,Text,Font,textArea,Enabled?ForeColor:SystemColors.GrayText,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPadding);
         if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(g,Rectangle.Inflate(rect,-4,-4));
     }
     protected override void Dispose(bool disposing) { if(disposing) { var image=Image; Image=null; image?.Dispose(); } base.Dispose(disposing); }
+}
+
+public sealed class DesktopShortcutButton : Button
+{
+    private bool hovered;
+    public DesktopShortcutButton()
+    {
+        SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.Opaque,true);
+        FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; UseVisualStyleBackColor=false; Cursor=Cursors.Hand;
+        Font=new("Tahoma",9.5f); TabStop=true;
+    }
+    protected override void OnPaintBackground(PaintEventArgs e) { }
+    protected override void OnMouseEnter(EventArgs e) { hovered=true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e) { hovered=false; Invalidate(); base.OnMouseLeave(e); }
+    protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+    protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Artwork.PaintBackdrop(this,e.Graphics);
+        float scale=DeviceDpi/96f; int icon=(int)(46*scale),top=(int)(9*scale),textTop=(int)(62*scale);
+        var selection=Rectangle.Inflate(ClientRectangle,-3,-2);
+        if(hovered||Focused)
+        {
+            using var fill=new SolidBrush(Color.FromArgb(150,255,248,253)); e.Graphics.FillRectangle(fill,selection);
+            using var border=new Pen(Color.FromArgb(155,168,119,166)); e.Graphics.DrawRectangle(border,selection);
+        }
+        if(Image is not null) { e.Graphics.InterpolationMode=InterpolationMode.NearestNeighbor; e.Graphics.PixelOffsetMode=PixelOffsetMode.Half; e.Graphics.DrawImage(Image,new Rectangle((Width-icon)/2,top,icon,icon)); }
+        var label=new Rectangle(5,textTop,Width-10,Math.Max(1,Height-textTop-5));
+        using var chip=new SolidBrush(Color.FromArgb(175,255,246,250)); e.Graphics.FillRectangle(chip,label);
+        TextRenderer.DrawText(e.Graphics,Text,Font,Rectangle.Inflate(label,-3,-2),Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
+        if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(e.Graphics,selection);
+    }
+    protected override void Dispose(bool disposing) { if(disposing) { var owned=Image; Image=null; owned?.Dispose(); } base.Dispose(disposing); }
+}
+
+internal enum CaptionAction { Minimize, Maximize, Close }
+internal sealed class WindowCaptionButton : Button
+{
+    private readonly CaptionAction glyph;
+    private bool hovered;
+    public WindowCaptionButton(CaptionAction glyph,Action action)
+    {
+        this.glyph=glyph; Size=new(28,24); AutoSize=false; Margin=new(2,0,0,0); MinimumSize=Size.Empty;
+        SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);
+        FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; TabStop=true;
+        AccessibleName=glyph switch { CaptionAction.Minimize=>"Minimize window",CaptionAction.Maximize=>"Maximize or restore window",_=>"Close window" };
+        Click+=(_,_)=>action();
+    }
+    protected override void OnMouseEnter(EventArgs e) { hovered=true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e) { hovered=false; Invalidate(); base.OnMouseLeave(e); }
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        e.Graphics.Clear(glyph==CaptionAction.Close?(hovered?Color.FromArgb(244,158,185):Color.FromArgb(251,203,218)):(hovered?Color.White:Color.FromArgb(224,235,253)));
+        ControlPaint.DrawBorder(e.Graphics,ClientRectangle,Color.FromArgb(108,131,170),ButtonBorderStyle.Solid);
+        float s=DeviceDpi/96f,cx=Width/2f,cy=Height/2f,r=4*s;
+        using var pen=new Pen(Color.FromArgb(54,53,83),Math.Max(1.5f,s*1.5f));
+        if(glyph==CaptionAction.Minimize)e.Graphics.DrawLine(pen,cx-r,cy+r/2,cx+r,cy+r/2);
+        else if(glyph==CaptionAction.Maximize) { e.Graphics.DrawRectangle(pen,cx-r,cy-r,r*2,r*2); e.Graphics.DrawLine(pen,cx-r,cy-r+2*s,cx+r,cy-r+2*s); }
+        else { e.Graphics.DrawLine(pen,cx-r,cy-r,cx+r,cy+r); e.Graphics.DrawLine(pen,cx+r,cy-r,cx-r,cy+r); }
+        if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(e.Graphics,Rectangle.Inflate(ClientRectangle,-3,-3));
+    }
 }
 
 public sealed class RetroTitleBar : Panel
@@ -77,17 +125,14 @@ public sealed class RetroTitleBar : Panel
     public RetroTitleBar(RetroForm owner)
     {
         this.owner=owner; Height=32; Dock=DockStyle.Top; Padding=new(2); DoubleBuffered=true;
-        var actions=new FlowLayoutPanel { Dock=DockStyle.Right, Width=91, FlowDirection=FlowDirection.LeftToRight, WrapContents=false, BackColor=Color.Transparent, Padding=new(0,1,0,0) };
-        minimize=CaptionButton("_",owner.MinimizeWindow,"Minimize window"); maximize=CaptionButton("□",owner.ToggleMaximize,"Maximize or restore window");
-        var close=CaptionButton("×",owner.Close,"Close window"); close.BackColor=Theme.Pink;
+        var actions=new FlowLayoutPanel { Dock=DockStyle.Right, Width=98, FlowDirection=FlowDirection.LeftToRight, WrapContents=false, BackColor=Color.Transparent, Padding=new(0,1,0,0) };
+        minimize=new WindowCaptionButton(CaptionAction.Minimize,owner.MinimizeWindow);
+        maximize=new WindowCaptionButton(CaptionAction.Maximize,owner.ToggleMaximize);
+        var close=new WindowCaptionButton(CaptionAction.Close,owner.Close);
         actions.Controls.AddRange([minimize,maximize,close]); Controls.Add(caption); Controls.Add(actions);
-        owner.TextChanged+=(_,_)=>caption.Text="♥  "+owner.Text; caption.Text="♥  "+owner.Text;
+        owner.TextChanged+=(_,_)=>caption.Text=owner.Text; caption.Text=owner.Text;
         caption.MouseDown+=DragDown; caption.MouseMove+=DragMove; caption.MouseUp+=(_,_)=>caption.Capture=false;
         caption.DoubleClick+=(_,_)=> { if(owner.MaximizeBox)owner.ToggleMaximize(); };
-    }
-    private static Button CaptionButton(string text,Action action,string name)
-    {
-        var b=Theme.Button(text,action); b.AutoSize=false; b.MinimumSize=Size.Empty; b.Size=new(27,25); b.Padding=Padding.Empty; b.Margin=new(1,0,1,0); b.AccessibleName=name; b.Font=new("Tahoma",11,FontStyle.Bold); b.BackColor=Theme.Blue; return b;
     }
     public void Sync() { minimize.Visible=owner.MinimizeBox; maximize.Visible=owner.MaximizeBox; }
     private void DragDown(object? sender,MouseEventArgs e)
@@ -225,12 +270,35 @@ public sealed class PixelPortrait : Control
 }
 public sealed class GuideControl : UserControl
 {
-    private readonly Label speech=new() { Dock=DockStyle.Top, Height=100, TextAlign=ContentAlignment.MiddleCenter, Padding=new(12), BackColor=Theme.Cream, BorderStyle=BorderStyle.FixedSingle };
+    private readonly Image? portrait=Artwork.Guide();
+    private string speech="Hover an app to learn more! Keyboard focus works too.";
     public GuideControl()
     {
-        SetStyle(ControlStyles.SupportsTransparentBackColor,true); BackColor=Color.Transparent; Height=290; Width=230;
-        Controls.Add(new PixelPortrait { Dock=DockStyle.Fill }); Controls.Add(speech); Say("Hover an app to learn more! Keyboard focus works too. ♥");
+        SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.Opaque,true);
+        Height=315; Width=230; TabStop=false; AccessibleRole=AccessibleRole.StaticText;
     }
-    public void Say(string text) { speech.Text=text; speech.AccessibleName="Guide: "+text; }
+    protected override void OnPaintBackground(PaintEventArgs e) { }
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Artwork.PaintBackdrop(this,e.Graphics);
+        var g=e.Graphics; float scale=DeviceDpi/96f;
+        var bubble=new Rectangle(2,2,Width-5,(int)(120*scale));
+        using var fill=new SolidBrush(Color.FromArgb(255,249,247)); using var edge=new Pen(Color.FromArgb(189,146,178));
+        g.FillRectangle(fill,bubble); g.DrawRectangle(edge,bubble);
+        var tail=new[]{new Point(Width/2-8,bubble.Bottom),new Point(Width/2,bubble.Bottom+9),new Point(Width/2+8,bubble.Bottom)};
+        g.FillPolygon(fill,tail); g.DrawLines(edge,tail);
+        using var tagFont=new Font("Tahoma",8,FontStyle.Bold); using var copyFont=new Font("Tahoma",9.5f);
+        TextRenderer.DrawText(g,"YOUR DREAM GUIDE",tagFont,new Rectangle(12,12,Width-24,(int)(18*scale)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter);
+        TextRenderer.DrawText(g,speech,copyFont,new Rectangle(14,(int)(36*scale),Width-28,bubble.Height-(int)(43*scale)),Theme.Ink,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
+        if(portrait is not null)
+        {
+            var source=new Rectangle(158,80,302,481); int height=Math.Max(1,Height-bubble.Bottom-(int)(20*scale)),width=(int)(height*302f/481f);
+            using var shadow=new SolidBrush(Color.FromArgb(30,92,65,110)); g.FillEllipse(shadow,Width/2-width/2,Height-12,width,9);
+            g.InterpolationMode=InterpolationMode.NearestNeighbor; g.PixelOffsetMode=PixelOffsetMode.Half;
+            g.DrawImage(portrait,new Rectangle((Width-width)/2,bubble.Bottom+(int)(14*scale),width,height),source,GraphicsUnit.Pixel);
+        }
+    }
+    public void Say(string text) { speech=text; AccessibleName="Guide: "+text; Invalidate(); if(IsHandleCreated)AccessibilityNotifyClients(AccessibleEvents.NameChange,-1); }
     public void Register(Control control,string text) { control.MouseEnter+=(_,_)=>Say(text); control.Enter+=(_,_)=>Say(text); }
+    protected override void Dispose(bool disposing) { if(disposing)portrait?.Dispose(); base.Dispose(disposing); }
 }
