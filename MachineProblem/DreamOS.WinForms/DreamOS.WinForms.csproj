@@ -20,4 +20,5 @@
     <Content Include="../DreamOS/02_App_Window_Concept_Crops/Hotel_Billing.png" Link="Assets/Hotel.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup><Content Include="Assets/WorkflowSprites.png" Link="Assets/WorkflowSprites.png" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><PackageReference Include="NAudio" Version="2.2.1" /></ItemGroup>
 </Project>

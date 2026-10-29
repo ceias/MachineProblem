@@ -40,7 +40,7 @@ Click a shortcut or choose a Start menu entry. Each app has one child form hoste
 | Appliance Store | Full reference catalog, quantities, multi-item cart, row removal, cash/charge totals, tendered/change, new transaction, File/Help menus |
 | About + Author | Project information, author popup and close |
 
-**Desktop Widgets** provides a live clock, calendar, saved notes, reminders, notification history and a local WAV player with play, loop and stop. Supply your own permitted audio. Reminder timers and notification history last for the current session; keep the widget window open for reminders. Notes prompt to save on close/logout/exit.
+**Desktop Widgets** provides a live clock, calendar, saved notes, reminders, notification history and a local audio player with play, pause, loop and stop. Supply your own permitted audio. Reminder timers and notification history last for the current session; keep the widget window open for reminders. Notes prompt to save on close/logout/exit.
 
 Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space activates focused buttons; Enter and Space activate focused controls. Both focus and hover update the guide.
 
@@ -82,7 +82,7 @@ Use the existing isolated checkout; no Git worktree is needed. The reusable envi
 
 ## Validation
 
-Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **97 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
+Current Linux validation: .NET 10 Release solution build succeeded with **0 warnings and 0 errors**; **106 regression checks passed, 0 failed, 0 skipped**. Coverage includes screenshot examples, every tuition/room table entry, deduction boundaries, invalid inputs, draw invariants, payment change, persisted votes, duplicate prevention, ties, JSON corruption and disk-write failure.
 
 On Windows, verify this acceptance pass before presentation:
 
@@ -90,7 +90,7 @@ On Windows, verify this acceptance pass before presentation:
 2. Launch all nine exercises from shortcuts and Start. Minimize/restore, maximize, focus, close/reopen, cascade and tile.
 3. Compute reference examples, try invalid fields, clear/reset each exercise; exercise password retry/cancel and linked transaction.
 4. Cast a vote, reopen/restart to confirm persistence, reject a duplicate ID, inspect tie/winner and reset.
-5. Save/reopen notes; cancel an unsaved-notes close/logout. Schedule a reminder and inspect notifications; play/loop/stop a local WAV.
+5. Save/reopen notes; cancel an unsaved-notes close/logout. Schedule a reminder and inspect notifications; play/pause/loop/stop a local MP3 and WAV.
 6. Check keyboard navigation, guide hover/focus, resizing and 100%/150%/200% DPI. Confirm original art remains proportional.
 
 Windows UI acceptance is **pending**, not claimed as passed by the Linux build or core tests.
@@ -144,3 +144,13 @@ The guide can be dragged within the desktop workspace. Its dragged position surv
 Notifications, validation errors, vote/reset confirmations, password retry/cancel, author information and unsaved-note prompts use `DreamDialog`. Enter and Escape have explicit button behavior; saving notes remains the default in its Save/No/Cancel prompt. The dialog close button never silently confirms a destructive action.
 
 Validation: both solutions build on .NET 10 with zero warnings/errors; 97 cross-platform checks pass, including bounded/paused guide motion and complete, terminating receipt pagination. Windows visual rendering, guide input interactions, actual printer/PDF-driver output and dialog keyboard behavior still require Windows acceptance testing.
+
+## Audio playback and invalid WAV files
+
+Music now uses pinned NAudio 2.2.1 with Windows decoding/output rather than `SoundPlayer`. The picker accepts MP3, WAV, M4A/AAC, WMA and AIFF; exact codec availability depends on Windows. Play resumes, Pause retains position, Stop resets to the beginning, and Loop reads continuously across the end of the recording. Closing the widget releases the audio device and file.
+
+File contents are checked independently of the extension, and decoder/output initialization must succeed before the track name or playback buttons change. A failed selection leaves the previous working track intact. Late playback/device failures are reported through the custom dialog on the UI thread. Renamed HTML, WebM/Ogg downloads and empty/truncated headers are recognized as unsupported rather than treated as valid WAV audio.
+
+If a recording still cannot load, export an actual MP3 or PCM WAV (16-bit, 44.1 kHz) with an audio converter/editor; renaming the extension is insufficient. No music or external audio is bundled.
+
+Current cross-platform validation: 106 checks pass, including audio-container signature and mislabeled-file cases. Both .NET 10 entry projects compile. Actual Windows codec/device playback and the user's specific recording cannot be validated on this Linux host. On Windows check MP3, PCM WAV, a converted/compressed recording, pause/resume, end-of-track looping, Stop, failed-file selection with an existing track, and closing the widget while playing.

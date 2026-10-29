@@ -141,6 +141,16 @@ Check("Receipt pagination retains every visual row and terminates",()=>
 });
 Check("Receipt rejects printer areas too small for a readable page",()=>Reject(()=>ReceiptPagination.Plan(10,200,218,20,206,44)));
 
+Check("Audio probe recognizes WAVE contents independently of the extension",()=>Equal(AudioContainer.Wave,AudioFileProbe.Identify("RIFF0000WAVEfmt "u8)));
+Check("Audio probe recognizes tagged MP3",()=>Equal(AudioContainer.Mp3,AudioFileProbe.Identify("ID3"u8)));
+Check("Audio probe recognizes raw MP3 frames",()=>Equal(AudioContainer.Mp3,AudioFileProbe.Identify(new byte[]{0xff,0xfb,0x90,0x64})));
+Check("Audio probe recognizes MP4 and M4A containers",()=>Equal(AudioContainer.Mp4,AudioFileProbe.Identify(new byte[]{0,0,0,24,(byte)'f',(byte)'t',(byte)'y',(byte)'p'})));
+Check("Audio probe recognizes AAC frames",()=>Equal(AudioContainer.Aac,AudioFileProbe.Identify(new byte[]{0xff,0xf1,0x50,0x80})));
+Check("Audio probe recognizes AIFF",()=>Equal(AudioContainer.Aiff,AudioFileProbe.Identify("FORM0000AIFF"u8)));
+Check("Renamed HTML does not become a WAV file",()=>Equal(AudioContainer.Unknown,AudioFileProbe.Identify("<!DOCTYPE html><html>"u8)));
+Check("Audio probe identifies unsupported WebM and Ogg downloads",()=>{Equal(AudioContainer.WebM,AudioFileProbe.Identify(new byte[]{0x1a,0x45,0xdf,0xa3}));Equal(AudioContainer.Ogg,AudioFileProbe.Identify("OggS"u8));});
+Check("Audio probe handles empty and truncated files",()=>{Equal(AudioContainer.Unknown,AudioFileProbe.Identify([]));Equal(AudioContainer.Unknown,AudioFileProbe.Identify("RIFF"u8));});
+
 string temp = Path.Combine(Path.GetTempPath(),"dreamos-tests-"+Guid.NewGuid().ToString("N"));
 try
 {
