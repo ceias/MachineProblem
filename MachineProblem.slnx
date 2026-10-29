@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="MachineProblem/MachineProblem.csproj" />
+  <Project Path="MachineProblem/DreamOS.Core/DreamOS.Core.csproj" />
+  <Project Path="MachineProblem/DreamOS.Tests/DreamOS.Tests.csproj" />
 </Solution>

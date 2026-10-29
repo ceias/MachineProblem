@@ -7,7 +7,12 @@ public sealed class PizzaForm : ExerciseForm
 {
     private readonly ComboBox size = Theme.Choice<PizzaSize>(), crust = Theme.Choice<Crust>(), drink = Theme.Choice<Drink>(), dining = Theme.Choice(["Dine in", "Take out"]);
     private readonly CheckedListBox toppings = new() { CheckOnClick = true, Height = 125, Width = 245 };
-    private PizzaOrder Order() => new(Theme.Selected<PizzaSize>(size), Theme.Selected<Crust>(crust), toppings.CheckedItems.Cast<Topping>().ToArray(), Theme.Selected<Drink>(drink), dining.SelectedIndex == 1);
+    private global::DreamOS.Core.PizzaOrder Order() => new(
+        Theme.Selected<PizzaSize>(size),
+        Theme.Selected<Crust>(crust),
+        toppings.CheckedItems.Cast<Topping>().ToArray(),
+        Theme.Selected<Drink>(drink),
+        dining.SelectedIndex == 1);
     public PizzaForm() : base("Special Pizza Builder")
     {
         toppings.Items.AddRange(Enum.GetValues<Topping>().Cast<object>().ToArray());

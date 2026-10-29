@@ -6,6 +6,20 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <RootNamespace>DreamOS.WinForms</RootNamespace>
+    <ApplicationManifest>DreamOS.WinForms/app.manifest</ApplicationManifest>
   </PropertyGroup>
+
+  <!-- Build the desktop sources only; the nested core and test projects are separate assemblies. -->
+  <ItemGroup>
+    <Compile Include="DreamOS.WinForms/**/*.cs"
+             Exclude="DreamOS.WinForms/**/bin/**;DreamOS.WinForms/**/obj/**" />
+    <ProjectReference Include="DreamOS.Core/DreamOS.Core.csproj" />
+    <Content Include="DreamOS/04_Guide_Character/Guide_Original_Reference.jpg"
+             Link="Assets/Guide.jpg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>
