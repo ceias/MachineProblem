@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -22,4 +22,14 @@
              Link="Assets/Guide.jpg" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <Content Include="DreamOS/03_Desktop_Login_Widgets/Login_Design.png" Link="Assets/Login.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/03_Desktop_Login_Widgets/Desktop_Overview.png" Link="Assets/Desktop.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/03_Desktop_Login_Widgets/Desktop_Widgets.png" Link="Assets/Widgets.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/02_App_Window_Concept_Crops/Pizza_Builder.png" Link="Assets/Pizza.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/02_App_Window_Concept_Crops/Lotto_Game.png" Link="Assets/Lotto.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/02_App_Window_Concept_Crops/Tuition_Fees.png" Link="Assets/Tuition.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="DreamOS/02_App_Window_Concept_Crops/Hotel_Billing.png" Link="Assets/Hotel.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

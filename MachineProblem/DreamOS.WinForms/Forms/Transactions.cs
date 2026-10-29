@@ -8,7 +8,7 @@ public sealed class StoreForm : ExerciseForm
     private readonly ShoppingCart cart = new();
     private readonly ComboBox product = Theme.Choice(Catalog.Products.Select(p => p.Name)), payment = Theme.Choice(["Cash (5% discount)", "Charge (5% surcharge)"]);
     private readonly NumericUpDown quantity = Theme.Number(0, 999), tendered = Theme.Number(0, 1_000_000_000, 0, 2);
-    private readonly ListBox lines = new() { Width = 620, Height = 125, HorizontalScrollbar = true, AccessibleName = "Cart items" };
+    private readonly ListBox lines = new() { Width = 470, Height = 125, HorizontalScrollbar = true, AccessibleName = "Cart items" };
     private readonly Label unitPrice = Theme.Label("Select an appliance.");
     private IPaymentRule Payment() => payment.SelectedIndex switch { 0 => new CashPaymentRule(), 1 => new ChargePaymentRule(), _ => throw new ArgumentException("Select cash or charge.") };
     public StoreForm(string username) : base("Appliance Store Transaction")

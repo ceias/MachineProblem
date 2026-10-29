@@ -26,7 +26,7 @@ Distribute the **whole output folder**, including `Assets/Guide.jpg`, rather tha
 
 ## Desktop and exercises
 
-Click a shortcut or choose a Start menu entry. Each app has one MDI child window; opening it again focuses it. Native title-bar buttons close, minimize and maximize. Taskbar buttons restore/focus apps. Start also offers cascade, tile, notifications, logout and exit. The supplied original girl-and-teddy image stays beside guidance that responds to mouse hover and keyboard focus.
+Click a shortcut or choose a Start menu entry. Each app has one child form hosted in the desktop workspace; opening it again focuses it. Custom blue title-bar buttons close, minimize and maximize; drag the title to move a window and the bottom-right grip to resize it. Taskbar buttons restore/focus apps. Start also offers cascade, tile, notifications, logout and exit. The supplied original girl-and-teddy image stays beside guidance that responds to mouse hover and keyboard focus.
 
 | Application | Behavior |
 | --- | --- |
@@ -42,7 +42,7 @@ Click a shortcut or choose a Start menu entry. Each app has one MDI child window
 
 **Desktop Widgets** provides a live clock, calendar, saved notes, reminders, notification history and a local WAV player with play, loop and stop. Supply your own permitted audio. Reminder timers and notification history last for the current session; keep the widget window open for reminders. Notes prompt to save on close/logout/exit.
 
-Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space activates focused buttons; standard Windows MDI navigation applies. Both focus and hover update the guide.
+Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space activates focused buttons; Enter and Space activate focused controls. Both focus and hover update the guide.
 
 ## Reference rules and demo data
 
@@ -54,7 +54,7 @@ Notes and votes are stored atomically under `%LOCALAPPDATA%\DreamOS` as `notes.j
 
 ## Project structure and OOP
 
-- `DreamOS.WinForms/`: native forms, reusable controls, theme, MDI shell, session lifecycle, local data wiring. Forms are composed in C# rather than generated Designer files; there is no web UI or third-party UI framework.
+- `DreamOS.WinForms/`: native forms, reusable controls, theme, desktop window host, session lifecycle, local data wiring. Forms are composed in C# rather than generated Designer files; there is no web UI or third-party UI framework.
 - `DreamOS.Core/`: independently testable models, calculations, catalog, auth simulation, JSON storage and election logic.
 - `DreamOS.Tests/`: dependency-free executable regression suite. **Run it with `dotnet run`, not `dotnet test`**; process exit code is nonzero on failure.
 - `DreamOS/`: supplied artwork, screenshots and design briefs.
@@ -94,3 +94,13 @@ On Windows, verify this acceptance pass before presentation:
 6. Check keyboard navigation, guide hover/focus, resizing and 100%/150%/200% DPI. Confirm original art remains proportional.
 
 Windows UI acceptance is **pending**, not claimed as passed by the Linux build or core tests.
+
+## Supplied artwork and interface
+
+The UI uses the original provided PNG artwork rather than a flat placeholder screen. Both entry projects copy the login, desktop, widgets, pizza, lotto, tuition and hotel PNGs plus the original guide JPEG into `Assets`. The supplied mockups are flattened images containing text and fake fields; `Controls/Artwork.cs` selects only decorative regions (clouds, heart badge, computer and app icons). Input fields, menus, title-bar actions and calculations remain real WinForms controls. The original image files are unchanged.
+
+The login follows the centered heart/title/input layout. The desktop has cloud wallpaper, pixel shortcuts, a welcome window, a bottom Start/taskbar/clock and the girl with a speech bubble. Shared exercise forms use blue title bars, beveled pink buttons, cream fields, an app illustration and a separate results panel. The guide background is masked during rendering; it no longer appears in an opaque white rectangle.
+
+All app windows consistently use borderless Forms hosted in one workspace Panel, replacing the earlier MDI implementation so their title bars can match the reference artwork. Minimize hides a window until its taskbar button is selected; maximize fills the workspace; restore returns its prior bounds.
+
+Windows visual validation is still required: check the supplied reference crops alongside the running login/desktop, hover and focus guidance, title-bar close/minimize/maximize/restore, window dragging and resizing, logout cancellation with unsaved notes, and layout at 100%, 150% and 200% DPI. Compilation and the core tests do not validate rendered appearance on Linux.
