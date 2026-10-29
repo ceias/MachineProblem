@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DreamOS.Core/DreamOS.Core.csproj" />
+    <Content Include="../DreamOS/04_Guide_Character/Guide_Original_Reference.jpg" Link="Assets/Guide.jpg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

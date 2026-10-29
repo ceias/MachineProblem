@@ -1,0 +1,3 @@
+# First Codex task
+
+Read `AGENTS.md`, `README.md` and the WinForms architecture document. Build a new functional C# .NET 10 Windows Forms solution named `DreamOS.sln` following the provided design assets and Visual Basic machine-problem references. Start with a working login form, Dream OS desktop shell with open/close/minimize app windows, retro theme, and a guide-character hover/focus dialogue system. Then implement the nine machine-problem apps with proper inputs, validation, and calculations based on the source screenshots. Use OOP principles; include clean namespaces and tests where possible. Do not use a web framework. Report files created and build status.
