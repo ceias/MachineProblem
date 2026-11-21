@@ -1,7 +1,7 @@
 using System.Drawing.Drawing2D;
 namespace DreamOS.WinForms.Controls;
 
-public sealed class IconCardPanel : Panel
+public class IconCardPanel : Panel
 {
     public IconCardPanel() { DoubleBuffered=true; BackColor=Color.FromArgb(255,251,249); Margin=new(5); Padding=new(12); }
     protected override void OnPaint(PaintEventArgs e)

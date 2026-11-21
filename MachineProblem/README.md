@@ -40,7 +40,7 @@ Click a shortcut or choose a Start menu entry. Each app has one child form hoste
 | Appliance Store | Full reference catalog, quantities, multi-item cart, row removal, cash/charge totals, tendered/change, new transaction, File/Help menus |
 | About + Author | Project information, author popup and close |
 
-**Desktop Widgets** provides a live clock, calendar, saved notes, reminders, notification history and a local audio player with play, pause, loop and stop. Supply your own permitted audio. Reminder timers and notification history last for the current session; keep the widget window open for reminders. Notes prompt to save on close/logout/exit.
+**Desktop Widgets** provides a live clock, calendar, saved notes, reminders, notification history and a local audio player with play, pause, loop and stop. Supply your own permitted audio. Reminder timers and notification history last for the current session; keep Dream OS running for reminders. Notes prompt to save on close/logout/exit.
 
 Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space activates focused buttons; Enter and Space activate focused controls. Both focus and hover update the guide.
 
@@ -172,3 +172,15 @@ For another server, set the `DREAMOS_SQL_CONNECTION` environment variable before
 Usernames are case-insensitive and unique. Passwords use random salts and PBKDF2-SHA256 hashes (210,000 iterations). There is no default account: choose **Create account / Sign in** to register. Previous SQLite `accounts.db` files are preserved but are not migrated or read; register again in SQL Server. Notes and votes retain their existing storage.
 
 SQL Server integration checks are opt-in: set `DREAMOS_TEST_SQLSERVER` to a **fresh disposable test database connection** and run DreamOS.Tests. The test suite creates sample accounts in that database; do not point it at your actual DreamOS database. Linux build/calculation checks do not prove SQL Server connectivity. On Windows verify registration, duplicate rejection, wrong password, and login after restarting the app.
+
+## Updated interactive workflows
+
+- **Lotto:** Place bet + draw animates rolling balls, reveals the three winning digits in order, and presents a custom result popup and ticket. Inputs are locked during the draw; close remains available.
+- **Hotel:** illustrated capacity, category and payment cards replace dropdowns. Choose check-in and check-out directly on always-visible month calendars in the Stay calendars tab. Checkout cannot precede check-in. Original room rates and surcharges apply.
+- **Payroll:** employee, position/rate and civil-status/tax cards replace dropdowns. Calculations retain the reference rules.
+- **Elections:** choose a named demo voter ID from the visible directory, then validate eligibility. Saved duplicate-vote checks still apply.
+- **Appliances:** each product card has its own quantity spinner. Select the card to add that quantity. The cashier has Basket and Payment + delivery tabs, with the final total always below. Cash retains 5% off; charge retains 5% surcharge. Optional classroom delivery adds PHP 150 and requires an address. No actual delivery is booked.
+- **Offers:** enter one optional demo serial: `DREAM-VOUCHER-10` (10%), `DREAM-PROMO-05` (5%), or `DREAM-GIFT-500` (PHP 500 credit). These reusable classroom codes apply after cash/charge adjustment, before delivery. Credit cannot make the merchandise total negative; there is no unused balance or cash redemption. Unknown or combined codes are rejected. The receipt lists the offer, savings, delivery, address, and final change.
+- **Reminders:** messages are snapshotted when scheduled and saved in `%LOCALAPPDATA%\DreamOS\reminders.json`. Closing Widgets does not cancel them. Keep Dream OS running to see them at the due time; if closed, overdue messages appear after the desktop opens again. Multiple reminders are supported; Cancel all reminders clears pending messages. Notifications use the custom dialog and a Windows alert sound (subject to Windows sound settings).
+
+Windows acceptance still needed: animation timing, selection cards and scrolling at 100%/150%/200% DPI, payment/delivery keyboard navigation, and a one-minute reminder after closing Widgets. This application cannot display reminders while Dream OS is not running.

@@ -83,6 +83,11 @@ Check("SQL Server default targets DreamOS LocalDB with Windows authentication",(
     Equal(@"(localdb)\MSSQLLocalDB",settings.DataSource); Equal("DreamOS",settings.InitialCatalog); Equal(true,settings.IntegratedSecurity);
 });
 Check("SQL Server account connection requires explicit database",()=>Reject(()=>new AccountService("Server=localhost;Integrated Security=true")));
+Check("Checkout preserves cash rule and applies voucher before delivery",()=> { var q=Checkout.Calculate(950,true,"DREAM-VOUCHER-10"); Equal(95m,q.Savings); Equal(1005m,q.Total); });
+Check("Checkout gift cannot reduce goods below zero",()=>Equal(0m,Checkout.Calculate(200,false,"DREAM-GIFT-500").Total));
+Check("Checkout promo case insensitive",()=>Equal(950m,Checkout.Calculate(1000,false,"dream-promo-05").Total));
+Check("Checkout rejects unknown serial",()=>Reject(()=>Checkout.Calculate(1000,false,"fake")));
+Check("Checkout pickup without offer",()=>Equal(1000m,Checkout.Calculate(1000,false,"").Total));
 var auth = new DemoAuthService();
 Check("Demo auth success",()=>Equal(true,auth.Authenticate("Dreamer","dream10")));
 Check("Demo auth missing name",()=>Equal(false,auth.Authenticate(" ","dream10")));
@@ -182,6 +187,12 @@ try
     Check("Account SQL injection rejected",()=>Equal(false,accounts.Authenticate("' OR 1=1 --","pastel-dreams")));
     }
     else Console.WriteLine("SQL Server account integration checks not run: set DREAMOS_TEST_SQLSERVER to a fresh disposable test database connection on Windows.");
+    var reminders=new ReminderService(new JsonStorage<ReminderState>(Path.Combine(temp,"reminders.json"),()=>new()));
+    var moment=new DateTime(2026,11,21,12,0,0);
+    Check("Reminder survives reopening and waits until due",()=> { reminders.Schedule(moment.AddMinutes(1),"Break"); var reopened=new ReminderService(new JsonStorage<ReminderState>(Path.Combine(temp,"reminders.json"),()=>new())); Equal(1,reopened.Pending.Count); Equal(0,reopened.TakeDue(moment).Count); });
+    Check("Reminder delivers overdue once",()=> { Equal("Break",reminders.TakeDue(moment.AddMinutes(2)).Single().Message); Equal(0,reminders.TakeDue(moment.AddMinutes(3)).Count); });
+    Check("Reminder cancels pending",()=> { reminders.Schedule(moment,"Cancelled"); reminders.CancelAll(); Equal(0,reminders.TakeDue(moment).Count); });
+    Check("Reminder rejects blank message",()=>Reject(()=>reminders.Schedule(moment," ")));
     var store = new JsonStorage<ElectionState>(Path.Combine(temp,"votes.json"),()=>new());
     var election = new ElectionService(store);
     Check("Election initial result",()=>Equal("No votes have been cast.",election.Result()));

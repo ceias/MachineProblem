@@ -65,24 +65,45 @@ public sealed class LottoForm : WorkflowForm
         main.Controls.Add(WorkflowUi.Text("03 · Winning numbers",12,true)); winners.Size=new(410,85); main.Controls.Add(winners);
         var rules=WorkflowUi.Text("Exact order: fictional PHP 1,000,000 jackpot.\nSame digits, different order: demo bet × 1,000.\nEvery draw uses three different digits.",9); main.Controls.Add(rules);
         bet.ValueChanged+=(_,_)=>receipt.Clear(); Split(WorkflowUi.Section("Your demo ticket",main),receipt);
-        Command("Draw numbers",Draw); Command("New ticket",()=> { for(int i=0;i<3;i++)digits[i].Value=i; bet.Value=10; winners.Clear(); receipt.Clear(); }); Command("Close",Close);
+        Command("Place bet + draw",Draw); Command("New ticket",()=> { if(drawing)return; for(int i=0;i<3;i++)digits[i].Value=i; bet.Value=10; winners.Clear(); receipt.Clear(); }); Command("Close",Close);
     }
+    private bool drawing;
     private void Draw()
     {
-        var service=new LottoService(); var ticket=digits.Select(d=>(int)d.Value).ToArray(); service.ValidateTicket(bet.Value,ticket); var draw=service.Draw(); var result=service.Evaluate(bet.Value,ticket,draw); winners.ShowNumbers(draw);
-        receipt.ShowDocument(new("CLASSROOM LOTTO TICKET",ReceiptData.NewReference("LOT"),DateTime.Now,[new("Your digits",string.Join(" · ",ticket)),new("Demo bet",Money.Format(bet.Value)),new("Winning digits",string.Join(" · ",draw)),new("Outcome",result.Outcome.ToString())],"FICTIONAL PRIZE",Money.Format(result.Prize),"Educational simulation. Not a real-money ticket."));
+        if(drawing)return;
+        var service=new LottoService(); var ticket=digits.Select(d=>(int)d.Value).ToArray(); service.ValidateTicket(bet.Value,ticket); var draw=service.Draw(); var wager=bet.Value; var result=service.Evaluate(wager,ticket,draw);
+        _=AnimateDraw(ticket,wager,draw,result);
+    }
+    private async Task AnimateDraw(int[] ticket,decimal wager,int[] draw,LottoResult result)
+    {
+        drawing=true; Workspace.Enabled=false; Status("Drawing your numbers… watch the balls roll!");
+        try { await winners.Roll(draw); } finally { drawing=false; if(!IsDisposed)Workspace.Enabled=true; }
+        if(IsDisposed)return;
+        Run(()=>FinishDraw(ticket,wager,draw,result));
+    }
+    private void FinishDraw(int[] ticket,decimal wager,int[] draw,LottoResult result)
+    {
+        DreamDialog.Show(this,"Winning numbers: "+string.Join(" · ",draw)+"\nYour ticket: "+string.Join(" · ",ticket)+"\n"+result.Outcome,"Your lotto draw");
+        receipt.ShowDocument(new("CLASSROOM LOTTO TICKET",ReceiptData.NewReference("LOT"),DateTime.Now,[new("Your digits",string.Join(" · ",ticket)),new("Demo bet",Money.Format(wager)),new("Winning digits",string.Join(" · ",draw)),new("Outcome",result.Outcome.ToString())],"FICTIONAL PRIZE",Money.Format(result.Prize),"Educational simulation. Not a real-money ticket."));
         Status(result.Outcome==LottoOutcome.NoMatch?"No match this time. You can try another demo draw.":$"{result.Outcome}! Your fictional prize is {Money.Format(result.Prize)}.");
     }
     private sealed class NumberBalls : Control
     {
         private int[]? numbers;
+        private int frame,revealed=3;
+        public async Task Roll(int[] values)
+        {
+            numbers=values; revealed=0;
+            for(frame=0;frame<54;frame++) { if(IsDisposed)return; revealed=Math.Clamp((frame-15)/12,0,3); Invalidate(); await Task.Delay(45); }
+            if(IsDisposed)return; revealed=3; frame=0; ShowNumbers(values);
+        }
         public NumberBalls() { DoubleBuffered=true; BackColor=Theme.Cream; }
         public void ShowNumbers(int[] values) { numbers=values; AccessibleName="Winning digits: "+string.Join(", ",values); Invalidate(); }
         public void Clear() { numbers=null; AccessibleName="Winning digits not drawn"; Invalidate(); }
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e); using var font=new Font("Consolas",26,FontStyle.Bold);
-            for(int i=0;i<3;i++) { var r=new Rectangle(8+i*100,8,72,66); using var fill=new SolidBrush(new[]{Color.FromArgb(244,199,219),Color.FromArgb(203,218,248),Color.FromArgb(218,233,218)}[i]); e.Graphics.FillEllipse(fill,r); TextRenderer.DrawText(e.Graphics,numbers is null?"?":numbers[i].ToString(),font,r,Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter); }
+            for(int i=0;i<3;i++) { var r=new Rectangle(8+i*100,8+(revealed<=i?(int)(Math.Sin(frame*.8+i)*7):0),72,66); using var fill=new SolidBrush(new[]{Color.FromArgb(244,199,219),Color.FromArgb(203,218,248),Color.FromArgb(218,233,218)}[i]); e.Graphics.FillEllipse(fill,r); if(revealed<=i) { using var ring=new Pen(Theme.Accent,2); e.Graphics.DrawArc(ring,Rectangle.Inflate(r,-5,-5),frame*25,180); } TextRenderer.DrawText(e.Graphics,numbers is null?"?":revealed<=i?((frame*7+i*3)%10).ToString():numbers[i].ToString(),font,r,Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter); }
         }
     }
 }
@@ -98,7 +119,7 @@ public sealed class TuitionForm : WorkflowForm
         var grid=WorkflowUi.Grid(); grid.RowCount=2; grid.RowStyles.Clear(); grid.RowStyles.Add(new(SizeType.Percent,61)); grid.RowStyles.Add(new(SizeType.Percent,39));
         var enrollment=WorkflowUi.Stack(); WorkflowUi.Field(enrollment,"Student",student); WorkflowUi.Field(enrollment,"Course",course); WorkflowUi.Field(enrollment,"Year level",year);
         var academic=WorkflowUi.Stack(); WorkflowUi.Field(academic,"Total academic units · 3–30",units); WorkflowUi.Field(academic,"Laboratory units · 0–3",labs);
-        academic.Controls.Add(WorkflowUi.Text("PHP 100 per academic unit\nPHP 1,000 per laboratory unit",10));
+        academic.Controls.Add(new InformationCard("YOUR ASSESSMENT RATES","PHP 100 per academic unit\nPHP 1,000 per laboratory unit"));
         grid.Controls.Add(WorkflowUi.Section("Enrollment",enrollment),0,0); grid.Controls.Add(WorkflowUi.Section("Study load",academic),1,0);
         var fees=new DataGridView { Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,RowHeadersVisible=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,BackgroundColor=Color.White,BorderStyle=BorderStyle.FixedSingle };
         fees.Columns.Add("year","Year level"); fees.Columns.Add("it","BSIT / BSCS"); fees.Columns.Add("other","BSA / BSN");
@@ -116,7 +137,9 @@ public sealed class TuitionForm : WorkflowForm
 
 public sealed class PayrollForm : WorkflowForm
 {
-    private readonly ComboBox employee=Theme.Choice(["EMP001 — Alex Santos","EMP002 — Sam Reyes","EMP003 — Jamie Cruz"]),position=Theme.Choice<Position>(),status=Theme.Choice<CivilStatus>();
+    private readonly SelectionCards<string> employee=new(["EMP001 — Alex Santos","EMP002 — Sam Reyes","EMP003 — Jamie Cruz"],["Alex Santos","Sam Reyes","Jamie Cruz"],["EMP001","EMP002","EMP003"],34);
+    private readonly SelectionCards<Position> position=new(Enum.GetValues<Position>(),["Position A","Position B","Position C"],["PHP 500 / day","PHP 400 / day","PHP 300 / day"],32);
+    private readonly SelectionCards<CivilStatus> status=new(Enum.GetValues<CivilStatus>(),["Single","Married","Widowed"],["10% tax","5% tax","5% tax"],34);
     private readonly NumericUpDown days=Theme.Number(1,31,20);
     private readonly DateTimePicker period=new() { Format=DateTimePickerFormat.Custom,CustomFormat="MMMM yyyy",ShowUpDown=true,Width=220 };
     private readonly ReceiptPanel receipt=new();
@@ -125,15 +148,15 @@ public sealed class PayrollForm : WorkflowForm
         var grid=WorkflowUi.Grid(); var profile=WorkflowUi.Stack(); var work=WorkflowUi.Stack();
         WorkflowUi.Field(profile,"Employee · sample records",employee); WorkflowUi.Field(profile,"Position code",position); WorkflowUi.Field(profile,"Civil status",status);
         WorkflowUi.Field(work,"Payroll month",period); WorkflowUi.Field(work,"Days worked · 1–31",days);
-        work.Controls.Add(WorkflowUi.Text("DAILY RATES",10,true)); work.Controls.Add(WorkflowUi.Text("Position A   PHP 500\nPosition B   PHP 400\nPosition C   PHP 300",10));
+        work.Controls.Add(new InformationCard("DAILY RATES","A · PHP 500  /  B · PHP 400  /  C · PHP 300\nChoose a position card to apply its rate."));
         work.Controls.Add(WorkflowUi.Text("Deductions follow the reference SSS brackets.\nSingle: 10% tax\nMarried / Widowed: 5% tax",9));
         grid.Controls.Add(WorkflowUi.Section("Employee profile",profile),0,0); grid.Controls.Add(WorkflowUi.Section("Pay period + attendance",work),1,0); Split(grid,receipt);
-        foreach(var c in new[]{employee,position,status})c.SelectedIndexChanged+=(_,_)=>receipt.Clear(); days.ValueChanged+=(_,_)=>receipt.Clear(); period.ValueChanged+=(_,_)=>receipt.Clear();
+        employee.SelectedIndexChanged+=(_,_)=>receipt.Clear(); position.SelectedIndexChanged+=(_,_)=>receipt.Clear(); status.SelectedIndexChanged+=(_,_)=>receipt.Clear(); days.ValueChanged+=(_,_)=>receipt.Clear(); period.ValueChanged+=(_,_)=>receipt.Clear();
         Command("Generate payslip",Compute); Command("Clear",()=> { employee.SelectedIndex=position.SelectedIndex=status.SelectedIndex=-1; days.Value=20; period.Value=DateTime.Today; receipt.Clear(); }); Command("Close",Close);
     }
     private void Compute()
     {
-        Require.That(employee.SelectedIndex>=0,"Select an employee."); var p=new PayrollService().Calculate(Theme.Selected<Position>(position),Theme.Selected<CivilStatus>(status),(int)days.Value);
+        Require.That(employee.SelectedIndex>=0,"Select an employee."); var p=new PayrollService().Calculate(position.SelectedValue,status.SelectedValue,(int)days.Value);
         receipt.ShowDocument(new("EMPLOYEE PAYSLIP",ReceiptData.NewReference("PAY"),DateTime.Now,[new("Employee",employee.Text),new("Period",period.Value.ToString("MMMM yyyy")),new("Position / status",position.Text+" / "+status.Text),new("Days worked",days.Value.ToString("0")),new("Daily rate",Money.Format(p.Rate)),new("Gross earnings",Money.Format(p.Basic)),new("SSS deduction","− "+Money.Format(p.Sss)),new("Withholding tax","− "+Money.Format(p.Tax))],"NET TAKE-HOME PAY",Money.Format(p.Net),"Classroom payroll statement. Keep this copy for your records.")); Status($"Payslip ready · net pay {Money.Format(p.Net)}.");
     }
 }
@@ -141,31 +164,41 @@ public sealed class PayrollForm : WorkflowForm
 public sealed class HotelForm : WorkflowForm
 {
     private readonly TextBox customer=new() { Width=230,MaxLength=100,PlaceholderText="Guest full name" },contact=new() { Width=230,MaxLength=80,PlaceholderText="Phone or email (optional)" };
-    private readonly DateTimePicker checkIn=new() { Format=DateTimePickerFormat.Short,Width=180 },checkOut=new() { Format=DateTimePickerFormat.Short,Width=180 };
-    private readonly ComboBox capacity=Theme.Choice<Capacity>(),room=Theme.Choice<RoomType>(),payment=Theme.Choice<HotelPayment>();
+    private readonly MonthCalendar checkIn=new() { MaxSelectionCount=1 },checkOut=new() { MaxSelectionCount=1 };
+    private readonly SelectionCards<Capacity> capacity=new(Enum.GetValues<Capacity>(),["Single","Double","Family"],["1 guest · 1 bed","2 guests · 2 beds","Family room"],30);
+    private readonly SelectionCards<RoomType> room=new(Enum.GetValues<RoomType>(),["Regular","DeLuxe","Suite"],["Essential stay","Extra comfort","Premium stay"],31);
+    private readonly SelectionCards<HotelPayment> payment=new(Enum.GetValues<HotelPayment>(),["Cash","Check","Credit card"],["No surcharge","+5% surcharge","+10% surcharge"],33);
     private readonly Label stay=WorkflowUi.Text("Choose room details to see your stay estimate.",10,true);
     private readonly ReceiptPanel receipt=new();
     public HotelForm() : base("Dream Hotel · Front Desk","Guest details → stay dates → room and payment → itemized guest folio.")
     {
-        var grid=WorkflowUi.Grid(); grid.RowCount=2; grid.RowStyles.Clear(); grid.RowStyles.Add(new(SizeType.Percent,55)); grid.RowStyles.Add(new(SizeType.Percent,45));
-        var guest=WorkflowUi.Stack(); WorkflowUi.Field(guest,"Guest name",customer); WorkflowUi.Field(guest,"Contact",contact); WorkflowUi.Field(guest,"Payment method",payment);
-        var dates=WorkflowUi.Stack(); WorkflowUi.Field(dates,"Check-in",checkIn); WorkflowUi.Field(dates,"Check-out",checkOut); dates.Controls.Add(WorkflowUi.Text("Same-day stays are billed as one day.\nCash 0% · Check +5% · Credit card +10%",9));
+        var tabs=new TabControl { Dock=DockStyle.Fill };
+        var guestPage=new TabPage("01 · Guest + room"); var datesPage=new TabPage("02 · Stay calendars"); var payPage=new TabPage("03 · Payment + estimate");
+        var guestGrid=WorkflowUi.Grid(); var guest=WorkflowUi.Stack(); WorkflowUi.Field(guest,"Guest name",customer); WorkflowUi.Field(guest,"Contact",contact);
+        guest.Controls.Add(new InformationCard("YOUR LITTLE HOTEL STAY","Complete the guest details, choose a room, then use the Stay calendars and Payment tabs."));
         var rooms=WorkflowUi.Stack(); WorkflowUi.Field(rooms,"Room capacity",capacity); WorkflowUi.Field(rooms,"Room category",room);
-        var overview=WorkflowUi.Stack(); overview.Controls.Add(WorkflowUi.Text("STAY OVERVIEW",10,true)); overview.Controls.Add(stay); overview.Controls.Add(WorkflowUi.Text("This is a billing estimate.\nRoom inventory and reservations are not tracked.",9));
-        grid.Controls.Add(WorkflowUi.Section("Guest profile",guest),0,0); grid.Controls.Add(WorkflowUi.Section("Dates + duration",dates),1,0); grid.Controls.Add(WorkflowUi.Section("Room selection",rooms),0,1); grid.Controls.Add(WorkflowUi.Section("Stay estimate",overview),1,1); Split(grid,receipt);
-        checkOut.Value=DateTime.Today.AddDays(1);
-        foreach(var c in new[]{capacity,room,payment})c.SelectedIndexChanged+=(_,_)=>Changed(); checkIn.ValueChanged+=(_,_)=> { checkOut.MinDate=checkIn.Value.Date; Changed(); }; checkOut.ValueChanged+=(_,_)=>Changed(); customer.TextChanged+=(_,_)=>receipt.Clear(); contact.TextChanged+=(_,_)=>receipt.Clear();
-        Command("Create guest folio",Compute); Command("New guest",()=> { customer.Clear(); contact.Clear(); capacity.SelectedIndex=room.SelectedIndex=payment.SelectedIndex=-1; checkIn.Value=DateTime.Today; checkOut.Value=DateTime.Today.AddDays(1); Changed(); }); Command("Close",Close);
+        guestGrid.Controls.Add(WorkflowUi.Section("Guest profile",guest),0,0); guestGrid.Controls.Add(WorkflowUi.Section("Room selection",rooms),1,0); guestPage.Controls.Add(guestGrid);
+        var datesGrid=WorkflowUi.Grid(); var arrival=WorkflowUi.Stack(); var departure=WorkflowUi.Stack();
+        arrival.Controls.Add(checkIn); arrival.Controls.Add(new InformationCard("CHECK-IN","Click your arrival date on the calendar."));
+        departure.Controls.Add(checkOut); departure.Controls.Add(new InformationCard("CHECK-OUT","Click your departure date. Same-day stays count as one billable day."));
+        datesGrid.Controls.Add(WorkflowUi.Section("Arrival calendar",arrival),0,0); datesGrid.Controls.Add(WorkflowUi.Section("Departure calendar",departure),1,0); datesPage.Controls.Add(datesGrid);
+        var payGrid=WorkflowUi.Grid(); var methods=WorkflowUi.Stack(); WorkflowUi.Field(methods,"Payment method",payment);
+        var overview=WorkflowUi.Stack(); overview.Controls.Add(stay); overview.Controls.Add(new InformationCard("BEFORE YOU CHECK IN","An estimate for your classroom guest folio. No room reservation or payment is confirmed."));
+        payGrid.Controls.Add(WorkflowUi.Section("Payment options",methods),0,0); payGrid.Controls.Add(WorkflowUi.Section("Stay overview",overview),1,0); payPage.Controls.Add(payGrid);
+        tabs.TabPages.AddRange([guestPage,datesPage,payPage]); Split(tabs,receipt);
+        checkOut.SetDate(DateTime.Today.AddDays(1)); checkOut.MinDate=checkIn.SelectionStart;
+        capacity.SelectedIndexChanged+=(_,_)=>Changed(); room.SelectedIndexChanged+=(_,_)=>Changed(); payment.SelectedIndexChanged+=(_,_)=>Changed(); checkIn.DateChanged+=(_,_)=> { checkOut.MinDate=checkIn.SelectionStart.Date; Changed(); }; checkOut.DateChanged+=(_,_)=>Changed(); customer.TextChanged+=(_,_)=>receipt.Clear(); contact.TextChanged+=(_,_)=>receipt.Clear();
+        Command("Create guest folio",Compute); Command("New guest",()=> { customer.Clear(); contact.Clear(); capacity.SelectedIndex=room.SelectedIndex=payment.SelectedIndex=-1; checkIn.SetDate(DateTime.Today); checkOut.SetDate(DateTime.Today.AddDays(1)); Changed(); }); Command("Close",Close);
     }
     private void Changed()
     {
         receipt.Clear(); stay.Text="Choose capacity, category and payment.";
         if(capacity.SelectedIndex<0||room.SelectedIndex<0||payment.SelectedIndex<0)return;
-        try { var t=new HotelService().Calculate("Preview",checkIn.Value,checkOut.Value,Theme.Selected<Capacity>(capacity),Theme.Selected<RoomType>(room),Theme.Selected<HotelPayment>(payment)); stay.Text=$"{t.Days} billable day(s)\n{Money.Format(t.Rate)} / day\nEstimated total: {Money.Format(t.Total)}"; } catch(ArgumentException e) { stay.Text=e.Message; }
+        try { var t=new HotelService().Calculate("Preview",checkIn.SelectionStart,checkOut.SelectionStart,capacity.SelectedValue,room.SelectedValue,payment.SelectedValue); stay.Text=$"{t.Days} billable day(s)\n{Money.Format(t.Rate)} / day\nEstimated total: {Money.Format(t.Total)}"; } catch(ArgumentException e) { stay.Text=e.Message; }
     }
     private void Compute()
     {
-        var t=new HotelService().Calculate(customer.Text,checkIn.Value,checkOut.Value,Theme.Selected<Capacity>(capacity),Theme.Selected<RoomType>(room),Theme.Selected<HotelPayment>(payment));
-        receipt.ShowDocument(new("GUEST FOLIO · ESTIMATE",ReceiptData.NewReference("HTL"),DateTime.Now,[new("Guest",customer.Text.Trim()),new("Contact",string.IsNullOrWhiteSpace(contact.Text)?"Not provided":contact.Text.Trim()),new("Check-in",checkIn.Value.ToString("dd MMM yyyy")),new("Check-out",checkOut.Value.ToString("dd MMM yyyy")),new("Room",capacity.Text+" / "+room.Text),new("Billable days",t.Days.ToString()),new("Daily rate",Money.Format(t.Rate)),new("Accommodation",Money.Format(t.BaseAmount)),new("Payment",payment.Text),new("Payment surcharge",Money.Format(t.Surcharge))],"TOTAL DUE",Money.Format(t.Total),"Billing estimate only. No reservation or payment is confirmed.")); Status("Guest folio ready to save or print.");
+        var t=new HotelService().Calculate(customer.Text,checkIn.SelectionStart,checkOut.SelectionStart,capacity.SelectedValue,room.SelectedValue,payment.SelectedValue);
+        receipt.ShowDocument(new("GUEST FOLIO · ESTIMATE",ReceiptData.NewReference("HTL"),DateTime.Now,[new("Guest",customer.Text.Trim()),new("Contact",string.IsNullOrWhiteSpace(contact.Text)?"Not provided":contact.Text.Trim()),new("Check-in",checkIn.SelectionStart.ToString("dd MMM yyyy")),new("Check-out",checkOut.SelectionStart.ToString("dd MMM yyyy")),new("Room",capacity.Text+" / "+room.Text),new("Billable days",t.Days.ToString()),new("Daily rate",Money.Format(t.Rate)),new("Accommodation",Money.Format(t.BaseAmount)),new("Payment",payment.Text),new("Payment surcharge",Money.Format(t.Surcharge))],"TOTAL DUE",Money.Format(t.Total),"Billing estimate only. No reservation or payment is confirmed.")); Status("Guest folio ready to save or print.");
     }
 }

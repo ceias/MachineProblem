@@ -1,3 +1,4 @@
+using DreamOS.Core;
 using DreamOS.WinForms.Controls;
 using DreamOS.WinForms.Services;
 namespace DreamOS.WinForms.Forms;
@@ -9,17 +10,18 @@ public sealed class WidgetsForm : WorkflowForm
     private readonly TabControl tabs=new() { Dock=DockStyle.Fill,Padding=new(18,8) };
     private readonly System.Windows.Forms.Timer timer=new() { Interval=1000 }; private readonly WindowsAudioPlayer player=new();
     private readonly Label playback=WorkflowUi.Text("No audio loaded.",9);
-    private DateTime? remindAt; private bool dirty;
+    private bool dirty;
     public event EventHandler? NotesSaved;
-    public WidgetsForm(Action<string> notify,string initialPage="Clock + calendar") : base("Your Desktop Widgets","Calendar, notes, reminders, and your own music—all in one little corner.")
+    public WidgetsForm(ReminderService reminders,string initialPage="Clock + calendar") : base("Your Desktop Widgets","Calendar, notes, reminders, and your own music—all in one little corner.")
     {
         var calendarTab=new TabPage("Clock + calendar") { BackColor=Theme.Cream };
         var calendarGrid=WorkflowUi.Grid(); var calendarBody=WorkflowUi.Stack(); calendarBody.Controls.Add(clock); calendarBody.Controls.Add(new MonthCalendar { MaxSelectionCount=1,AccessibleName="Calendar" });
         var reminder=WorkflowUi.Stack(); var message=new TextBox { Width=245,Text="Take a little dream break!",MaxLength=240 }; var delay=Theme.Number(1,1440,5);
         WorkflowUi.Field(reminder,"Reminder message",message); WorkflowUi.Field(reminder,"Minutes from now",delay);
-        reminder.Controls.Add(Theme.Button("Set reminder",()=> { remindAt=DateTime.Now.AddMinutes((double)delay.Value); reminderStatus.Text=$"Scheduled for {remindAt:t}.\nKeep this window open."; }));
-        reminder.Controls.Add(Theme.Button("Cancel reminder",()=> { remindAt=null; reminderStatus.Text="Reminder cancelled."; })); reminder.Controls.Add(reminderStatus);
+        reminder.Controls.Add(Theme.Button("Set reminder",()=> { Run(()=> { var due=DateTime.Now.AddMinutes((double)delay.Value); reminders.Schedule(due,message.Text); reminderStatus.Text=$"Scheduled for {due:t}.\nYou can close Widgets; keep Dream OS running."; }); }));
+        reminder.Controls.Add(Theme.Button("Cancel all reminders",()=> { Run(()=> { reminders.CancelAll(); reminderStatus.Text="All pending reminders cancelled."; }); })); reminder.Controls.Add(reminderStatus);
         calendarGrid.Controls.Add(WorkflowUi.Section("Your day",calendarBody),0,0); calendarGrid.Controls.Add(WorkflowUi.Section("A little nudge",reminder),1,0); calendarTab.Controls.Add(calendarGrid);
+        Theme.Guard(this,()=>reminderStatus.Text=$"{reminders.Pending.Count} saved reminder(s). Close Widgets safely; reminders run on the desktop.");
         var notesTab=new TabPage("Notes") { BackColor=Theme.Cream }; var paper=new Panel { Dock=DockStyle.Fill,Padding=new(14) }; paper.Controls.Add(notes); notesTab.Controls.Add(WorkflowUi.Section("Your notepad",paper));
         Theme.Guard(this,()=>notes.Text=LocalData.Store("notes",()=>new NoteState()).Load().Text);
         notes.TextChanged+=(_,_)=> { dirty=true; Status("Notes changed. Save before closing to keep them on your desktop."); };
@@ -51,7 +53,7 @@ public sealed class WidgetsForm : WorkflowForm
         tabs.TabPages.AddRange([calendarTab,notesTab,musicTab]); Workspace.Controls.Add(tabs); SelectPage(initialPage);
         var saveNotes=Command("Save notes",()=> { if(SaveNotes())Status("Notes saved. The desktop preview is updated."); }); Command("Close",Close);
         saveNotes.Visible=tabs.SelectedTab?.Text=="Notes"; tabs.SelectedIndexChanged+=(_,_)=>saveNotes.Visible=tabs.SelectedTab?.Text=="Notes";
-        clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); UpdateTransport(); playback.Text="Audio: "+player.State+(player.IsLooping?" · looping":""); if(player.TakePlaybackError() is string error) { Status("Playback failed. Choose another recording or a converted copy.",true); DreamDialog.Show(this,error,"Audio playback",MessageBoxButtons.OK,MessageBoxIcon.Warning); } if(remindAt is DateTime due&&DateTime.Now>=due) { remindAt=null; reminderStatus.Text="Reminder delivered."; notify(message.Text); } }; timer.Start();
+        clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); UpdateTransport(); playback.Text="Audio: "+player.State+(player.IsLooping?" · looping":""); if(player.TakePlaybackError() is string error) { Status("Playback failed. Choose another recording or a converted copy.",true); DreamDialog.Show(this,error,"Audio playback",MessageBoxButtons.OK,MessageBoxIcon.Warning); } }; timer.Start();
         FormClosing+=(_,e)=> { if(!dirty)return; var answer=DreamDialog.Show(this,"Save your notes before closing?","Notes",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question); if(answer==DialogResult.Cancel)e.Cancel=true; if(answer==DialogResult.Yes&&!SaveNotes())e.Cancel=true; };
     }
     public void SelectPage(string name) { foreach(TabPage page in tabs.TabPages)if(page.Text==name) { tabs.SelectedTab=page; return; } }

@@ -1,3 +1,5 @@
+using DreamOS.Core;
+using DreamOS.WinForms.Services;
 using DreamOS.WinForms.Controls;
 namespace DreamOS.WinForms.Forms;
 
@@ -15,6 +17,8 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
     private readonly Label clock=new() { Dock=DockStyle.Right, Width=115, TextAlign=ContentAlignment.MiddleCenter, BorderStyle=BorderStyle.Fixed3D, BackColor=Theme.Cream };
     private readonly ContextMenuStrip startMenu=new() { BackColor=Theme.Cream, Font=new("Tahoma",10), ShowImageMargin=true };
     private readonly List<string> notifications=[];
+    private readonly ReminderService reminders=new(LocalData.Store("reminders",()=>new ReminderState()));
+    private bool checkingReminders;
     private readonly AppInfo[] apps;
     public bool LogoutRequested { get; private set; }
     public DesktopForm(string username) : base("Dream OS • "+username)
@@ -62,7 +66,7 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
         startMenu.Items.Add("Return guide home",null,(_,_)=>guide.ResetHome());
         workspace.Resize+=(_,_)=>LayoutDesktop();
         Shown+=(_,_)=>LayoutDesktop();
-        clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); calendar.Invalidate(); }; timer.Start();
+        clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm\ndd MMM yyyy"); calendar.Invalidate(); CheckReminders(); }; timer.Start();
         Shown+=(_,_)=>Open(new("welcome","Welcome home","Let's make something lovely. Choose an app from your desktop or Start.",()=>new WelcomeForm(()=>Open(apps.First(a=>a.Id=="widgets")))));
         FormClosing+=(_,e)=>
         {
@@ -123,7 +127,7 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
     }
     private WidgetsForm CreateWidgets(string page)
     {
-        var form=new WidgetsForm(Notify,page); form.NotesSaved+=(_,_)=>widgetDock.ReloadNotes(); return form;
+        var form=new WidgetsForm(reminders,page); form.NotesSaved+=(_,_)=>widgetDock.ReloadNotes(); return form;
     }
     private void OpenWidgets(string page)
     {
@@ -132,6 +136,15 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
     }
     private void OpenStore(string username)=>Open(apps.First(a=>a.Id=="store") with { Create=()=>new StoreForm(username) });
     public void PresentDialogGuide(string message)=>guide.React("notification",message.Length>180?message[..177]+"…":message);
+    private void CheckReminders()
+    {
+        if(checkingReminders)return;
+        checkingReminders=true;
+        try { foreach(var item in reminders.TakeDue(DateTime.Now)) { System.Media.SystemSounds.Exclamation.Play(); Notify(item.Message); } }
+        catch(Exception ex) when(ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        { timer.Stop(); DreamDialog.Show(this,"Reminders could not be read or saved. Check the DreamOS app-data folder. "+ex.Message,"Reminder storage",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
+        finally { checkingReminders=false; }
+    }
     private void Notify(string text) { notifications.Add($"{DateTime.Now:t} • {text}"); if(notifications.Count>100)notifications.RemoveAt(0); guide.React("notification",text); DreamDialog.Show(this,text,"Dream OS • reminder",MessageBoxButtons.OK,MessageBoxIcon.Information); }
     private void ShowNotifications()=>DreamDialog.Show(this,notifications.Count==0?"No notifications yet. Schedule one in Desktop Widgets.":string.Join(Environment.NewLine,notifications),"Notifications");
     private void Logout() { LogoutRequested=true; Close(); }

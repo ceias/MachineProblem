@@ -70,9 +70,10 @@ public sealed class ChoiceCard : Button
     private bool selected;
     private readonly Image? sprite;
     private readonly string description;
+    private readonly int symbol;
     public ChoiceCard(string title,string description,int spriteIndex,Action action)
     {
-        Text=title; this.description=description; sprite=WorkflowArt.Sprite(spriteIndex);
+        Text=title; symbol=spriteIndex; this.description=description; sprite=WorkflowArt.Sprite(spriteIndex);
         Size=new(102,94); Margin=new(3); Font=new("Tahoma",9); FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; UseVisualStyleBackColor=false;
         AccessibleName=title+" "+description; Click+=(_,_)=>action();
         SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);
@@ -84,10 +85,22 @@ public sealed class ChoiceCard : Button
         ControlPaint.DrawBorder(e.Graphics,ClientRectangle,selected?Theme.Accent:Color.FromArgb(220,205,218),selected?2:1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid);
         int S(int value)=>LogicalToDeviceUnits(value);
         int imageHeight=(int)(Height*.5f),textTop=imageHeight+S(6),footer=S(18);
+        if(sprite is null) DrawSymbol(e.Graphics,new Rectangle((Width-imageHeight)/2,S(4),imageHeight,imageHeight));
         if(sprite is not null) { e.Graphics.InterpolationMode=InterpolationMode.NearestNeighbor; e.Graphics.DrawImage(sprite,new Rectangle((Width-imageHeight)/2,S(4),imageHeight,imageHeight)); }
         TextRenderer.DrawText(e.Graphics,Text,Font,new Rectangle(S(3),textTop,Width-S(6),Math.Max(1,Height-textTop-footer-S(3))),Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
         using var small=new Font("Tahoma",8); TextRenderer.DrawText(e.Graphics,description,small,new Rectangle(S(3),Height-footer,Width-S(6),footer-S(2)),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.NoPadding|TextFormatFlags.EndEllipsis);
         if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(e.Graphics,Rectangle.Inflate(ClientRectangle,-4,-4));
+    }
+    private void DrawSymbol(Graphics g,Rectangle r)
+    {
+        var state=g.Save(); g.TranslateTransform(r.X,r.Y); g.ScaleTransform(r.Width/48f,r.Height/48f);
+        using var pen=new Pen(Theme.Accent,2); using var fill=new SolidBrush(Theme.Blue);
+        if(symbol==30 || symbol==31 || symbol==38) { g.FillRectangle(fill,4,20,40,18); g.DrawRectangle(pen,4,20,40,18); g.DrawRectangle(pen,6,14,12,9); if(!description.StartsWith("1 guest"))g.DrawRectangle(pen,29,14,12,9); g.DrawLine(pen,4,12,4,43); g.DrawLine(pen,44,24,44,43); if(symbol==31||symbol==38)g.DrawString("★",Font,Brushes.Goldenrod,18,0); }
+        else if(symbol==34) { for(int i=0;i<3;i++) { g.FillEllipse(fill,4+i*14,7,10,10); g.DrawEllipse(pen,4+i*14,7,10,10); g.DrawRectangle(pen,3+i*14,20,12,20); } }
+        else if(symbol==37) { g.FillRectangle(fill,8,4,32,40); g.DrawRectangle(pen,8,4,32,40); g.DrawLine(pen,13,14,34,14); g.DrawLine(pen,13,21,29,21); g.DrawLines(pen,[new Point(15,32),new Point(22,38),new Point(34,26)]); }
+        else if(symbol==36) { g.FillRectangle(fill,3,12,27,24); g.DrawRectangle(pen,3,12,27,24); g.DrawRectangle(pen,30,22,14,14); g.DrawEllipse(pen,8,33,8,8); g.DrawEllipse(pen,33,33,8,8); }
+        else { g.FillRectangle(fill,3,10,42,28); g.DrawRectangle(pen,3,10,42,28); g.DrawLine(pen,4,18,44,18); g.DrawString(symbol==32?"₱":"✓",Font,Brushes.DeepPink,16,21); }
+        g.Restore(state);
     }
     protected override void Dispose(bool disposing) { if(disposing)sprite?.Dispose(); base.Dispose(disposing); }
 }
