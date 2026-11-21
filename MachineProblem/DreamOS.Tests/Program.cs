@@ -154,6 +154,24 @@ Check("Audio probe handles empty and truncated files",()=>{Equal(AudioContainer.
 string temp = Path.Combine(Path.GetTempPath(),"dreamos-tests-"+Guid.NewGuid().ToString("N"));
 try
 {
+    var accountPath=Path.Combine(temp,"accounts.db");
+    var accounts=new AccountService(accountPath);
+    Check("Account register and persistent login",()=>{accounts.Register("Dreamer","pastel-dreams");Equal(true,new AccountService(accountPath).Authenticate("dreamer","pastel-dreams"));});
+    Check("Account password is salted and hashed",()=>
+    {
+        accounts.Register("Other","pastel-dreams");
+        using var connection=new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={accountPath}"); connection.Open();
+        using var command=connection.CreateCommand(); command.CommandText="SELECT hex(PasswordHash),hex(Salt) FROM Accounts ORDER BY Username";
+        using var reader=command.ExecuteReader(); reader.Read(); var hash=reader.GetString(0); var salt=reader.GetString(1);
+        Equal(64,hash.Length); Equal(32,salt.Length); reader.Read();
+        Equal(false,hash==reader.GetString(0)); Equal(false,salt==reader.GetString(1));
+    });
+    Check("Account wrong password",()=>Equal(false,accounts.Authenticate("Dreamer","incorrect")));
+    Check("Account unknown username",()=>Equal(false,accounts.Authenticate("Nobody","pastel-dreams")));
+    Check("Account duplicate case insensitive",()=>Reject(()=>accounts.Register("DREAMER","another-password")));
+    Check("Account short password",()=>Reject(()=>accounts.Register("Newbie","tiny")));
+    Check("Account invalid username",()=>Reject(()=>accounts.Register("bad name","pastel-dreams")));
+    Check("Account SQL injection rejected",()=>Equal(false,accounts.Authenticate("' OR 1=1 --","pastel-dreams")));
     var store = new JsonStorage<ElectionState>(Path.Combine(temp,"votes.json"),()=>new());
     var election = new ElectionService(store);
     Check("Election initial result",()=>Equal("No votes have been cast.",election.Result()));
@@ -170,7 +188,7 @@ try
     Check("JSON corruption is reported",()=>{File.WriteAllText(Path.Combine(temp,"bad.json"),"not JSON");try{new JsonStorage<ElectionState>(Path.Combine(temp,"bad.json"),()=>new()).Load();throw new Exception("Expected invalid JSON error");}catch(JsonException){} });
     Check("JSON invalid election records reported",()=>{store.Save(new(){Votes=new(){["unknown"]="Noli"}});try{new ElectionService(store);throw new Exception("Expected invalid data error");}catch(InvalidDataException){} });
 }
-finally { if(Directory.Exists(temp))Directory.Delete(temp,true); }
+finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); if(Directory.Exists(temp))Directory.Delete(temp,true); }
 Console.WriteLine($"\n{passed} passed, {failed} failed; no skipped tests.");
 return failed == 0 ? 0 : 1;
 

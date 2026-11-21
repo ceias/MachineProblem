@@ -6,7 +6,7 @@ A native **C# Windows Forms / .NET 10** mini desktop for an OOP classroom projec
 
 1. Install **Visual Studio 2026** with a version compatible with your .NET 10 SDK feature band and the **.NET desktop development** workload. Install a stable .NET 10 SDK. `global.json` allows stable 10.0 feature bands from 10.0.100 onward; cloud validation used 10.0.403.
 2. Open `DreamOS.sln`, set `DreamOS.WinForms` as the startup project, and press **F5**.
-3. Sign in with any nonempty demo username and password **`dream10`**.
+3. Click **Create account / Sign in**, choose a username (3–30 letters, digits, or underscores) and a password (8–100 characters), then sign in. The desktop login uses saved accounts; `dream10` remains only in the separate classroom Password Entry exercise.
 
 From a Windows terminal in this checkout:
 
@@ -48,7 +48,7 @@ Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space acti
 
 Calculations follow the original screenshots in `DreamOS/05_Original_References`, rather than the generated design board. PHP amounts use `decimal` and two-decimal rounding away from zero. Payroll uses continuous SSS intervals: below 1,000 = 1%; [1,000, 5,000) = 3%; [5,000, 10,000) = 5%; 10,000+ = 7%. Payroll days are limited to a 31-day pay period.
 
-The supplied screenshots do not specify a usable password or full employee/voter roster. Both login flows therefore use the documented demo password `dream10`; employee names are sample records. Demo voter IDs are `12345`, `10001`, `10002`, `10003`. Classroom candidate labels follow the reference: Noli, Val, Lester, Gwapo. Tallies start at zero. Authentication, voting and lotto are local educational demonstrations; no real accounts, public elections, stakes or prizes are involved.
+The supplied screenshots do not specify a usable password or full employee/voter roster. The separate Password Entry exercise uses the documented demo password `dream10`; desktop sign-in uses the local account database. Employee names are sample records. Demo voter IDs are `12345`, `10001`, `10002`, `10003`. Classroom candidate labels follow the reference: Noli, Val, Lester, Gwapo. Tallies start at zero. Authentication, voting and lotto are local educational demonstrations; accounts are local to this computer and no public elections, stakes or prizes are involved.
 
 Notes and votes are stored atomically under `%LOCALAPPDATA%\DreamOS` as `notes.json` and `classroom-votes.json`. This is per Windows user, shared across demo login names. File/JSON errors are reported without silently discarding saved votes. To recover corrupt data, close the app and restore a backup or rename the affected JSON file. Demo votes can also be reset with confirmation inside Elections.
 
@@ -154,3 +154,9 @@ File contents are checked independently of the extension, and decoder/output ini
 If a recording still cannot load, export an actual MP3 or PCM WAV (16-bit, 44.1 kHz) with an audio converter/editor; renaming the extension is insufficient. No music or external audio is bundled.
 
 Current cross-platform validation: 106 checks pass, including audio-container signature and mislabeled-file cases. Both .NET 10 entry projects compile. Actual Windows codec/device playback and the user's specific recording cannot be validated on this Linux host. On Windows check MP3, PCM WAV, a converted/compressed recording, pause/resume, end-of-track looping, Stop, failed-file selection with an existing track, and closing the widget while playing.
+
+## Local login database
+
+The login screen uses **SQLite**, supplied by the **Microsoft.Data.Sqlite 10.0.0** NuGet package in DreamOS.Core. Visual Studio restores this package automatically during build; no SQL Server installation or additional database workload is needed. If restore is disabled, right-click the solution and choose **Restore NuGet Packages**. Keep the **.NET desktop development** workload and .NET 10 SDK installed.
+
+The app creates `%LOCALAPPDATA%\DreamOS\accounts.db` automatically. Accounts persist after restart, with case-insensitive unique usernames, random salts and PBKDF2-SHA256 password hashes (210,000 iterations). No default account or plain-text passwords are stored. Back up the database with the application closed. This is a local classroom account system, with no email recovery or remote synchronization. Notes and votes retain their existing per-Windows-user storage.

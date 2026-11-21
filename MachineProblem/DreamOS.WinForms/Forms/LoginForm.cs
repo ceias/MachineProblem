@@ -1,4 +1,6 @@
 using DreamOS.Core;
+using DreamOS.WinForms.Services;
+using Microsoft.Data.Sqlite;
 using DreamOS.WinForms.Controls;
 
 namespace DreamOS.WinForms.Forms;
@@ -10,25 +12,53 @@ public sealed class LoginForm : RetroForm
     public event EventHandler? Authenticated;
     public LoginForm() : base("Dream OS Login")
     {
-        MinimumSize=new(480,600); ClientSize=new(550,650); MaximizeBox=false; StartPosition=FormStartPosition.CenterScreen;
+        MinimumSize=new(480,710); ClientSize=new(550,740); MaximizeBox=false; StartPosition=FormStartPosition.CenterScreen;
         var scene=new LoginScene { Dock=DockStyle.Fill };
-        var card=new IconCardPanel { Size=new(350,460), BackColor=Color.FromArgb(255,239,246) };
+        var card=new IconCardPanel { Size=new(350,535), BackColor=Color.FromArgb(255,239,246) };
         var badge=new HeartBadge { Bounds=new(125,0,100,100) };
         var heading=new Label { Text="DREAM OS", Font=new("Consolas",28,FontStyle.Bold), ForeColor=Color.FromArgb(203,65,116), BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,110,350,48) };
         var subtitle=new Label { Text="Please login to continue…", Font=new("Tahoma",11), ForeColor=Theme.Ink, BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,164,350,25) };
         var nameField=new LoginField(username,false) { Bounds=new(15,213,320,45), TabIndex=0 };
         var passField=new LoginField(password,true) { Bounds=new(15,276,320,45), TabIndex=1 };
-        var error=new Label { Bounds=new(15,392,320,40), TextAlign=ContentAlignment.MiddleCenter, ForeColor=Theme.Accent, BackColor=Color.Transparent };
+        bool registering=false;
+        var confirm=new TextBox { BorderStyle=BorderStyle.None, UseSystemPasswordChar=true, MaxLength=100, AccessibleName="Confirm password", PlaceholderText="confirm password", Font=new("Tahoma",12) };
+        var confirmField=new LoginField(confirm,true) { Bounds=new(15,330,320,45), Visible=false, TabIndex=2 };
+        var error=new Label { Bounds=new(15,478,320,50), TextAlign=ContentAlignment.MiddleCenter, ForeColor=Theme.Accent, BackColor=Color.Transparent };
         var submit=Theme.Button("Login",()=>
         {
-            if(!new DemoAuthService().Authenticate(username.Text,password.Text)) { error.Text="Enter a username and password dream10."; password.SelectAll(); password.Focus(); return; }
-            error.Text=""; Authenticated?.Invoke(this,EventArgs.Empty);
+            try
+            {
+                var accounts=new AccountService(Path.Combine(LocalData.DirectoryPath,"accounts.db"));
+                if(registering)
+                {
+                    if(password.Text!=confirm.Text) { error.Text="Passwords must match."; return; }
+                    accounts.Register(username.Text,password.Text);
+                    password.Clear(); confirm.Clear();
+                    error.Text="Account created! Sign in with your new password.";
+                    registering=false; confirmField.Visible=false; ((Button)AcceptButton!).Text="Login"; subtitle.Text="Please login to continue…";
+                    password.Focus(); return;
+                }
+                if(!accounts.Authenticate(username.Text,password.Text))
+                { error.Text="Incorrect username or password."; password.SelectAll(); password.Focus(); return; }
+                error.Text=""; Authenticated?.Invoke(this,EventArgs.Empty);
+            }
+            catch(ArgumentException ex) { error.Text=ex.Message; }
+            catch(Exception ex) when(ex is SqliteException or IOException or UnauthorizedAccessException)
+            { DreamDialog.Show(this,"The account database could not be opened or saved. Check your local app-data folder permissions and try again.","Account database",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
+
         });
-        submit.AutoSize=false; submit.Bounds=new(78,343,194,42); submit.BackColor=Color.FromArgb(239,111,163); submit.ForeColor=Color.White; submit.Font=new("Tahoma",12,FontStyle.Bold); submit.TabIndex=2;
-        card.Controls.AddRange([badge,heading,subtitle,nameField,passField,submit,error]);
+        submit.AutoSize=false; submit.Bounds=new(78,392,194,42); submit.BackColor=Color.FromArgb(239,111,163); submit.ForeColor=Color.White; submit.Font=new("Tahoma",12,FontStyle.Bold); submit.TabIndex=3;
+        var switchMode=Theme.Button("Create account / Sign in",()=>
+        {
+            registering=!registering; confirmField.Visible=registering;
+            subtitle.Text=registering ? "Create your little Dream OS account" : "Please login to continue…";
+            submit.Text=registering ? "Create account" : "Login"; error.Text=""; password.Clear(); confirm.Clear();
+        });
+        switchMode.AutoSize=false; switchMode.Bounds=new(60,440,230,30); switchMode.TabIndex=4;
+        card.Controls.AddRange([badge,heading,subtitle,nameField,passField,confirmField,submit,switchMode,error]);
         var guide=new PixelPortrait { Size=new(125,205), Anchor=AnchorStyles.Left|AnchorStyles.Bottom };
         var footer=new Label { Text="♥  Insert your dreams here…  ♥", AutoSize=false, Height=33, BackColor=Theme.Cream, ForeColor=Theme.Accent, Dock=DockStyle.Bottom, TextAlign=ContentAlignment.MiddleCenter, Font=new("Tahoma",10) };
-        var hint=new Label { Text="Demo login: any name / dream10", Height=25, BackColor=Color.Transparent, ForeColor=Theme.Accent, TextAlign=ContentAlignment.MiddleCenter };
+        var hint=new Label { Text="Local accounts • Create an account to begin", Height=25, BackColor=Color.Transparent, ForeColor=Theme.Accent, TextAlign=ContentAlignment.MiddleCenter };
         scene.Controls.Add(card); scene.Controls.Add(guide); scene.Controls.Add(hint); scene.Controls.Add(footer); Controls.Add(scene); AcceptButton=submit;
         scene.Layout+=(_,_)=>
         {
