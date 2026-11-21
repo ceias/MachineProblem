@@ -37,7 +37,7 @@ public static class WorkflowUi
 public class WorkflowForm : RetroForm
 {
     protected Panel Workspace { get; }=new() { Dock=DockStyle.Fill,Padding=new(10) };
-    private readonly FlowLayoutPanel commands=new() { Dock=DockStyle.Bottom,Height=54,Padding=new(8,4,8,4),BackColor=Theme.Pink,WrapContents=false,AutoScroll=true };
+    private readonly Panel commands=new() { BackColor=Theme.Cream };
     private readonly Label hint=new() { Dock=DockStyle.Bottom,Height=23,AutoEllipsis=true,ForeColor=Color.FromArgb(114,98,128),Font=new("Tahoma",9) };
     public WorkflowForm() : this("Dream OS","Choose your options to get started.") { }
     protected WorkflowForm(string title,string subtitle) : base(title)
@@ -60,18 +60,48 @@ public class WorkflowForm : RetroForm
     // Keep task actions beside the final review instead of in a detached window footer.
     protected void PlaceActions(Control host)
     {
-        var card=new IconCardPanel { Padding=new(8), Margin=new(0,10,0,6), AutoSize=true, AutoSizeMode=AutoSizeMode.GrowAndShrink, Width=280, Height=60 };
-        var title=WorkflowUi.Text("READY WHEN YOU ARE",9,true); title.ForeColor=Theme.Accent; title.Dock=DockStyle.Top; title.AutoSize=false; title.Height=24;
-        commands.Dock=DockStyle.Top; commands.AutoSize=true; commands.AutoSizeMode=AutoSizeMode.GrowAndShrink; commands.WrapContents=true; commands.AutoScroll=false; commands.Padding=new(0); commands.BackColor=card.BackColor;
+        // Docked children do not supply a reliable preferred width to an AutoSize
+        // Panel inside a FlowLayoutPanel. Size this card and its button rows explicitly.
+        var card=new IconCardPanel { AutoSize=false, Padding=new(8), Margin=new(0,10,0,6), Size=new(280,100) };
+        var title=WorkflowUi.Text("READY WHEN YOU ARE",9,true); title.ForeColor=Theme.Accent; title.AutoSize=false;
+        commands.Dock=DockStyle.None; commands.BackColor=card.BackColor;
         card.Controls.Add(commands); card.Controls.Add(title);
-        if(host is FlowLayoutPanel) { card.Dock=DockStyle.None; } else card.Dock=DockStyle.Bottom;
+        card.Dock=host is FlowLayoutPanel?DockStyle.None:DockStyle.Bottom;
+        bool fitting=false;
         void Fit()
         {
-            int width=Math.Max(150,host.ClientSize.Width-host.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8);
-            card.Width=width; commands.MaximumSize=new(Math.Max(130,width-card.Padding.Horizontal),0);
+            if(fitting||card.IsDisposed)return;
+            fitting=true;
+            try
+            {
+                int Scale(int value)=>(int)Math.Ceiling(value*card.DeviceDpi/96f);
+                int pad=Scale(8), gap=Scale(6), heading=Scale(24);
+                int width=Math.Max(Scale(180),host.ClientSize.Width-host.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-Scale(8));
+                int available=Math.Max(Scale(140),width-pad*2);
+                int x=0,y=0,rowHeight=0;
+                // Include buttons on inactive tabs: Visible is false through their
+                // parent, but they still need their space when the tab is opened.
+                foreach(Control button in commands.Controls)
+                {
+                    Size preferred=button.GetPreferredSize(Size.Empty);
+                    int bw=Math.Min(available,Math.Max(Scale(90),preferred.Width));
+                    int bh=Math.Max(Scale(34),preferred.Height);
+                    if(x>0&&x+bw>available) { y+=rowHeight+gap; x=0; rowHeight=0; }
+                    button.AutoSize=false; button.SetBounds(x,y,bw,bh);
+                    x+=bw+gap; rowHeight=Math.Max(rowHeight,bh);
+                }
+                int height=Math.Max(Scale(34),y+rowHeight);
+                title.SetBounds(pad,pad,available,heading);
+                commands.SetBounds(pad,pad+heading,available,height);
+                card.MinimumSize=new(Scale(180),heading+pad*2+Scale(34));
+                card.Size=new(width,pad*2+heading+height);
+            }
+            finally { fitting=false; }
         }
-        host.Controls.Add(card); host.ClientSizeChanged+=(_,_)=>Fit(); Fit();
+        host.Controls.Add(card); host.ClientSizeChanged+=(_,_)=>Fit();
+        card.DpiChangedAfterParent+=(_,_)=>Fit(); Shown+=(_,_)=>Fit(); Fit();
     }
+
     protected Button Command(string title,Action action)
     {
         var button=Theme.Button(title,()=>Run(action)); button.Margin=new(3,3,3,3); commands.Controls.Add(button); return button;
