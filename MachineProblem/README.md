@@ -196,3 +196,9 @@ Visual placement and generated sprite appearance need Windows verification at th
 ## UI stylesheet integration
 
 The supplied pastel UI stylesheet guides the shared theme: #F9C7DC pink, #CDB7F3 lavender, #B9D8FF blue and #FFF9FB surfaces; glossy rounded buttons, rounded card outlines, soft section headers and coordinated tabs, tables and input colors. The desktop uses a lavender-to-pink sky with pixel blossoms, stars and cloud banks. Existing pixel artwork and all calculation/account behavior are preserved. Segoe UI provides Windows body text without additional font installation; pixel-style headings remain. The reference image is a design guide, not a screenshot used as a background. Native input mechanics and window actions remain intact. Display scaling, text fitting, hover/focus/disabled appearance and layout need Windows verification.
+
+## Spacious checkout and election sections
+
+Appliances now uses four full-width steps beside the receipt: Appliances + basket, Payment, Delivery, and Complete sale. Remove selected stays with the basket; the final step shows a live review and the Complete sale/New sale controls. Payment and delivery no longer share the narrow cashier column. Existing price, discount and delivery validation remains in place.
+
+Elections separates the voter directory and ballot into two cards. Cast vote stays below the ballot; Show result and Reset election are on a separate Results + management tab. Windows visual/DPI verification remains pending.

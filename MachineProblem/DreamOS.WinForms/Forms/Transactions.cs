@@ -12,9 +12,10 @@ public sealed class StoreForm : WorkflowForm
     private readonly TextBox serial=new() { Width=240,MaxLength=60,PlaceholderText="Voucher / promo / gift serial" };
     private readonly NumericUpDown quantity=Theme.Number(1,999,1),tendered=Theme.Number(0,1_000_000_000,0,2);
     private readonly DataGridView basket=new() { Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AllowUserToResizeRows=false,RowHeadersVisible=false,SelectionMode=DataGridViewSelectionMode.FullRowSelect,MultiSelect=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill,AutoSizeRowsMode=DataGridViewAutoSizeRowsMode.AllCells,BackgroundColor=Color.White,BorderStyle=BorderStyle.FixedSingle,AccessibleName="Cashier basket" };
+    private readonly Label review=WorkflowUi.Text("Add appliances to start your sale.",12,true);
     private readonly Label totals=WorkflowUi.Text("Subtotal: PHP 0.00\nAdd products to start a sale.",10,true);
     private IPaymentRule Rule()=>payment.SelectedIndex switch { 0=>new CashPaymentRule(),1=>new ChargePaymentRule(),_=>throw new ArgumentException("Choose cash or charge.") };
-    public StoreForm(string username) : base("Dream Appliances · Cashier","Set quantity on each card, add to basket, then open Payment + delivery to check out.")
+    public StoreForm(string username) : base("Dream Appliances · Cashier","Set quantity on each card, add to basket, then follow Payment, Delivery, and Complete sale.")
     {
         var main=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=2,RowCount=1 };
         main.ColumnStyles.Add(new(SizeType.Percent,100)); main.ColumnStyles.Add(new(SizeType.Absolute,310)); main.RowStyles.Add(new(SizeType.Percent,100));
@@ -42,18 +43,25 @@ public sealed class StoreForm : WorkflowForm
         var pay=new FlowLayoutPanel { Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new(0,8,0,0) };
         payment.MaximumSize=new(250,0); payment.Width=240; tendered.Width=235; pay.Controls.Add(WorkflowUi.Text("Payment method",9,true)); pay.Controls.Add(payment); pay.Controls.Add(WorkflowUi.Text("Cash tendered",9,true)); pay.Controls.Add(tendered); using(var truck=WorkflowArt.Sprite(50))if(truck is not null)delivery.Image=new Bitmap(truck,new Size(32,32));
         delivery.TextImageRelation=TextImageRelation.ImageBeforeText; delivery.Disposed+=(_,_)=>delivery.Image?.Dispose();
-        pay.Controls.Add(delivery); pay.Controls.Add(address); var offerHeading=new FlowLayoutPanel { AutoSize=true,WrapContents=false,Margin=new(0,5,0,0) };
+        var dispatch=WorkflowUi.Stack(); dispatch.Controls.Add(new InformationCard("PICKUP OR DELIVERY","Store pickup is free. Delivery costs PHP 150 and requires an address.")); dispatch.Controls.Add(delivery); dispatch.Controls.Add(address); var offerHeading=new FlowLayoutPanel { AutoSize=true,WrapContents=false,Margin=new(0,5,0,0) };
         var giftArt=new PictureBox { Size=new(32,32),SizeMode=PictureBoxSizeMode.Zoom,Image=WorkflowArt.Sprite(51) }; giftArt.Disposed+=(_,_)=>giftArt.Image?.Dispose();
         offerHeading.Controls.Add(giftArt); offerHeading.Controls.Add(WorkflowUi.Text("Voucher / promo / gift check",9,true)); pay.Controls.Add(offerHeading); pay.Controls.Add(serial);
         pay.Controls.Add(Theme.Button("Demo offer serials",()=>DreamDialog.Show(this,string.Join("\n",Checkout.DemoOffers.Select(o=>o.Name+" · "+o.Serial))+"\nOne offer per sale, applied after the cash/charge rule. Delivery costs PHP 150. Codes are reusable classroom examples.","Classroom offers")));
         totals.MaximumSize=Size.Empty; totals.AutoSize=false; totals.Height=88; totals.Dock=DockStyle.Bottom; totals.Padding=new(4); totals.BackColor=Theme.Cream;
-        var checkoutTabs=new TabControl { Dock=DockStyle.Fill }; var basketPage=new TabPage("Basket"); var paymentPage=new TabPage("Payment + delivery");
-        basketPage.Controls.Add(basket); paymentPage.Controls.Add(pay); checkoutTabs.TabPages.AddRange([basketPage,paymentPage]);
-        cashier.Controls.Add(checkoutTabs); cashier.Controls.Add(totals); cashier.Controls.Add(operatorLabel);
-        main.Controls.Add(WorkflowUi.Section("Appliance catalog",catalogPanel),0,0); main.Controls.Add(WorkflowUi.Section("Cashier overview",cashier),1,0); Split(main,receipt,270);
+        var basketArea=new Panel { Dock=DockStyle.Fill }; var basketActions=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=48,WrapContents=true };
+        basketActions.Controls.Add(Theme.Button("Remove selected",()=>Run(()=> { Require.That(basket.SelectedRows.Count>0,"Select a basket row to remove."); cart.RemoveAt(basket.SelectedRows[0].Index); RefreshBasket(); })));
+        basketArea.Controls.Add(basket); basketArea.Controls.Add(basketActions);
+        cashier.Controls.Add(basketArea); cashier.Controls.Add(totals); cashier.Controls.Add(operatorLabel);
+        main.Controls.Add(WorkflowUi.Section("Appliance catalog",catalogPanel),0,0); main.Controls.Add(WorkflowUi.Section("Basket overview",cashier),1,0);
+        var steps=new TabControl { Dock=DockStyle.Fill,Multiline=true };
+        var shopPage=new TabPage("01 · Appliances + basket"); shopPage.Controls.Add(main);
+        var payPage=new TabPage("02 · Payment"); payPage.Controls.Add(WorkflowUi.Section("Payment + optional offer",pay));
+        var deliveryPage=new TabPage("03 · Delivery"); deliveryPage.Controls.Add(WorkflowUi.Section("Delivery preferences",dispatch));
+        var finalPage=new TabPage("04 · Complete sale"); var final=WorkflowUi.Stack(); final.Controls.Add(review); final.Controls.Add(new InformationCard("REVIEW YOUR SALE","Check your payment and delivery details above, then complete the classroom sale.")); finalPage.Controls.Add(WorkflowUi.Section("Final review",final));
+        steps.TabPages.AddRange([shopPage,payPage,deliveryPage,finalPage]); Split(steps,receipt,270);
         payment.SelectedIndexChanged+=(_,_)=> { tendered.Enabled=payment.SelectedIndex==0; UpdateTotals(); }; tendered.ValueChanged+=(_,_)=>UpdateTotals(); payment.SelectedIndex=0;
-        delivery.CheckedChanged+=(_,_)=> { address.Enabled=delivery.Checked; UpdateTotals(); }; address.TextChanged+=(_,_)=>receipt.Clear(); serial.TextChanged+=(_,_)=>UpdateTotals();
-        Command("Complete sale",Complete); Command("Remove item",()=> { Require.That(basket.SelectedRows.Count>0,"Select a basket row to remove."); cart.RemoveAt(basket.SelectedRows[0].Index); RefreshBasket(); }); Command("New sale",Reset); Command("About",()=> { using var about=new AboutForm(); about.ShowDialog(this); }); PlaceActions(pay);
+        delivery.CheckedChanged+=(_,_)=> { address.Enabled=delivery.Checked; UpdateTotals(); }; address.TextChanged+=(_,_)=>UpdateTotals(); serial.TextChanged+=(_,_)=>UpdateTotals();
+        Command("Complete sale",Complete); Command("New sale",()=> { Reset(); steps.SelectedTab=shopPage; }); Command("About",()=> { using var about=new AboutForm(); about.ShowDialog(this); }); PlaceActions(final);
     }
     private void RefreshBasket()
     {
@@ -62,12 +70,13 @@ public sealed class StoreForm : WorkflowForm
     private void UpdateTotals()
     {
         receipt.Clear("Complete a sale to create the cashier receipt.");
-        if(cart.Items.Count==0) { totals.Text="Subtotal: PHP 0.00\nAdd products to start a sale."; return; }
+        if(cart.Items.Count==0) { totals.Text="Subtotal: PHP 0.00\nAdd products to start a sale."; review.Text=totals.Text; return; }
         CheckoutTotal quote;
         try { quote=Checkout.Calculate(cart.Total(Rule()),delivery.Checked,serial.Text); }
-        catch(ArgumentException ex) { totals.Text=ex.Message; return; }
+        catch(ArgumentException ex) { totals.Text=ex.Message; review.Text=ex.Message; return; }
         decimal total=quote.Total; totals.Text=$"Subtotal: {Money.Format(cart.Subtotal)}\nOffer: −{Money.Format(quote.Savings)} · Delivery: {Money.Format(quote.Delivery)}\nTOTAL: {Money.Format(total)}";
         if(payment.SelectedIndex==0)totals.Text+=tendered.Value>=total?$"\nChange: {Money.Format(tendered.Value-total)}":$"\nCash needed: {Money.Format(total-tendered.Value)}";
+        review.Text=totals.Text+"\n\nPayment: "+payment.Text+"\n"+(delivery.Checked?"Delivery to: "+address.Text:"Store pickup")+"\nOffer: "+(string.IsNullOrWhiteSpace(serial.Text)?"None":serial.Text.Trim());
     }
     private void Complete()
     {
@@ -110,12 +119,17 @@ public sealed class ElectionForm : WorkflowForm
         var main=WorkflowUi.Grid(); var ballot=WorkflowUi.Stack(); WorkflowUi.Field(ballot,"Demo voter ID",voter);
         ballot.Controls.Add(Theme.Button("Validate ID",()=>Run(()=> { var name=election.ValidateVoter(voter.Text.Trim()); validated=voter.Text.Trim(); candidate.Enabled=true; Status($"ID accepted · {name}. Choose a candidate."); })));
         WorkflowUi.Field(ballot,"Candidate",candidate); candidate.Enabled=false;
-        ballot.Controls.Add(new InformationCard("DEMO VOTER DIRECTORY","Choose your classroom ID below, then validate it. Each ID can vote once."));
-        foreach(var entry in ElectionService.DemoVoters) { var id=entry.Key; ballot.Controls.Add(Theme.Button(entry.Value+" · "+id,()=> { voter.Text=id; Status("ID selected. Click Validate ID to check eligibility."); })); }
-        tally.Columns.Add("candidate","Candidate"); tally.Columns.Add("votes","Votes"); main.Controls.Add(WorkflowUi.Section("Your classroom ballot",ballot),0,0); main.Controls.Add(WorkflowUi.Section("Live tally",tally),1,0); Split(main,receipt);
+        var directory=WorkflowUi.Stack(); directory.Controls.Add(new InformationCard("DEMO VOTER DIRECTORY","Choose your classroom ID below, then validate it. Each ID can vote once."));
+        foreach(var entry in ElectionService.DemoVoters) { var id=entry.Key; directory.Controls.Add(Theme.Button(entry.Value+" · "+id,()=> { voter.Text=id; Status("ID selected. Click Validate ID to check eligibility."); })); }
+        tally.Columns.Add("candidate","Candidate"); tally.Columns.Add("votes","Votes"); main.Controls.Add(WorkflowUi.Section("01 · Voter directory",directory),0,0); main.Controls.Add(WorkflowUi.Section("02 · Validate + vote",ballot),1,0);
+        var electionTabs=new TabControl { Dock=DockStyle.Fill }; var votePage=new TabPage("Voter + ballot"); votePage.Controls.Add(main);
+        var resultsPage=new TabPage("Results + management"); var resultsBody=new Panel { Dock=DockStyle.Fill }; var resultsActions=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=100,WrapContents=true,Padding=new(8) };
+        resultsBody.Controls.Add(tally); resultsBody.Controls.Add(resultsActions); resultsPage.Controls.Add(WorkflowUi.Section("Election results",resultsBody)); electionTabs.TabPages.AddRange([votePage,resultsPage]); Split(electionTabs,receipt);
         voter.TextChanged+=(_,_)=> { validated=null; candidate.Enabled=false; candidate.SelectedIndex=-1; receipt.Clear(); };
         Command("Cast vote",()=> { Require.That(validated is not null,"Validate your voter ID first."); Require.That(candidate.SelectedIndex>=0,"Choose a candidate."); if(DreamDialog.Show(this,$"Confirm your classroom vote for {candidate.Text}?","Confirm ballot",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return; string id=validated!,choice=candidate.Text; election.Vote(id,choice); voter.Clear(); RefreshTally(); receipt.ShowDocument(new("CLASSROOM VOTE CONFIRMATION",ReceiptData.NewReference("VOTE"),DateTime.Now,[new("Voter ID",id),new("Candidate",choice)],"STATUS","RECORDED","Classroom demonstration. No real public-election vote.")); Status("Vote recorded. This voter ID cannot vote again."); });
-        Command("Show result",()=>Status(election.Result())); Command("Reset election",()=> { if(DreamDialog.Show(this,"Erase all locally saved classroom votes?","Reset",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) { election.Reset(); voter.Clear(); RefreshTally(); receipt.Clear(); } }); PlaceActions(ballot); RefreshTally();
+        resultsActions.Controls.Add(Theme.Button("Show result",()=>Run(()=>DreamDialog.Show(this,election.Result(),"Classroom results"))));
+        resultsActions.Controls.Add(Theme.Button("Reset election",()=>Run(()=> { if(DreamDialog.Show(this,"Erase all locally saved classroom votes?","Reset",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) { election.Reset(); voter.Clear(); RefreshTally(); receipt.Clear(); } })));
+        PlaceActions(ballot); RefreshTally();
     }
     private void RefreshTally() { tally.Rows.Clear(); foreach(var row in election.Tally())tally.Rows.Add(row.Key,row.Value); }
 }
