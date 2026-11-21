@@ -51,7 +51,7 @@ public sealed class WidgetsForm : WorkflowForm
         media.Controls.Add(transport);
         media.Controls.Add(WorkflowUi.Text("MP3, WAV and other supported Windows audio formats.\nChanging a filename extension does not convert the recording.",9)); musicTab.Controls.Add(WorkflowUi.Section("Your listening corner",media));
         tabs.TabPages.AddRange([calendarTab,notesTab,musicTab]); Workspace.Controls.Add(tabs); SelectPage(initialPage);
-        var saveNotes=Command("Save notes",()=> { if(SaveNotes())Status("Notes saved. The desktop preview is updated."); }); Command("Close",Close);
+        var saveNotes=Command("Save notes",()=> { if(SaveNotes())Status("Notes saved. The desktop preview is updated."); }); PlaceActions(paper);
         saveNotes.Visible=tabs.SelectedTab?.Text=="Notes"; tabs.SelectedIndexChanged+=(_,_)=>saveNotes.Visible=tabs.SelectedTab?.Text=="Notes";
         clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); timer.Tick+=(_,_)=> { clock.Text=DateTime.Now.ToString("HH:mm:ss\ndd MMM yyyy"); UpdateTransport(); playback.Text="Audio: "+player.State+(player.IsLooping?" · looping":""); if(player.TakePlaybackError() is string error) { Status("Playback failed. Choose another recording or a converted copy.",true); DreamDialog.Show(this,error,"Audio playback",MessageBoxButtons.OK,MessageBoxIcon.Warning); } }; timer.Start();
         FormClosing+=(_,e)=> { if(!dirty)return; var answer=DreamDialog.Show(this,"Save your notes before closing?","Notes",MessageBoxButtons.YesNoCancel,MessageBoxIcon.Question); if(answer==DialogResult.Cancel)e.Cancel=true; if(answer==DialogResult.Yes&&!SaveNotes())e.Cancel=true; };

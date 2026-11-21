@@ -15,7 +15,10 @@ public sealed class SelectionCards<T> : FlowLayoutPanel
     public SelectionCards(T[] values,string[] labels,string[] details,int icon=30)
     {
         this.values=values; Width=330; AutoSize=true; AutoSizeMode=AutoSizeMode.GrowAndShrink; MaximumSize=new(340,0); WrapContents=true; Margin=new(0,0,0,10);
-        for(int i=0;i<values.Length;i++) { int index=i; int art=icon==33&&labels[i]=="Cash"?32:icon==33&&labels[i]=="Check"?37:icon==31&&labels[i]=="Regular"?30:icon==31&&labels[i]=="Suite"?38:icon; var card=new ChoiceCard(labels[i],details[i],art,()=>SelectedIndex=index) { Size=new(100,100),TabIndex=i }; cards.Add(card); Controls.Add(card); }
+        for(int i=0;i<values.Length;i++) { int index=i; int art=icon switch {
+            30=>40+i, 31=>43+i, 32=>46, 34=>49,
+            33=>labels[i]=="Cash"?46:labels[i]=="Check"?47:48,
+            _=>icon }; var card=new ChoiceCard(labels[i],details[i],art,()=>SelectedIndex=index) { Size=new(100,100),TabIndex=i }; cards.Add(card); Controls.Add(card); }
     }
 }
 

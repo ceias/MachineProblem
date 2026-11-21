@@ -184,3 +184,11 @@ SQL Server integration checks are opt-in: set `DREAMOS_TEST_SQLSERVER` to a **fr
 - **Reminders:** messages are snapshotted when scheduled and saved in `%LOCALAPPDATA%\DreamOS\reminders.json`. Closing Widgets does not cancel them. Keep Dream OS running to see them at the due time; if closed, overdue messages appear after the desktop opens again. Multiple reminders are supported; Cancel all reminders clears pending messages. Notifications use the custom dialog and a Windows alert sound (subject to Windows sound settings).
 
 Windows acceptance still needed: animation timing, selection cards and scrolling at 100%/150%/200% DPI, payment/delivery keyboard navigation, and a one-minute reminder after closing Widgets. This application cannot display reminders while Dream OS is not running.
+
+## Actions and service artwork
+
+Hotel capacity, room-category and payment selections now use the new `ServiceSprites.png` pixel artwork. Payroll uses the staff/cash illustrations; checkout uses payment, delivery and gift-voucher art. Existing pizza/appliance art and supplied references are preserved.
+
+Task actions now live inside the final relevant card rather than a detached bottom toolbar. Hotel **Create guest folio** and **New guest** appear beneath Stay overview in the Payment + estimate tab. Lotto actions follow the ticket/rules; payroll follows the pay-period summary; tuition follows study-load information; appliance actions follow payment/delivery; election actions follow the ballot directory. Pizza actions sit inside the receipt/review panel. Notes Save is inside the Notes card; sign-in and About actions are inside their content cards. Use the title-bar **X** to close a window. Action rows wrap at narrow widths; scroll the content card if needed.
+
+Visual placement and generated sprite appearance need Windows verification at the actual display scale.

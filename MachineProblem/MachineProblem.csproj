@@ -34,4 +34,5 @@
   </ItemGroup>
   <ItemGroup><Content Include="DreamOS.WinForms/Assets/WorkflowSprites.png" Link="Assets/WorkflowSprites.png" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
   <ItemGroup><PackageReference Include="NAudio" Version="2.2.1" /></ItemGroup>
+  <ItemGroup><Content Include="DreamOS.WinForms/Assets/ServiceSprites.png" Link="Assets/ServiceSprites.png" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

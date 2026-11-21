@@ -40,7 +40,11 @@ public sealed class StoreForm : WorkflowForm
         basket.Columns.Add("product","Item"); basket.Columns.Add("quantity","Qty"); basket.Columns.Add("amount","Amount"); basket.Columns[0].FillWeight=54; basket.Columns[1].FillWeight=14; basket.Columns[2].FillWeight=32;
         basket.DefaultCellStyle.Font=new("Tahoma",9); basket.DefaultCellStyle.WrapMode=DataGridViewTriState.True; basket.DefaultCellStyle.SelectionBackColor=Theme.Blue; basket.DefaultCellStyle.SelectionForeColor=Theme.Ink;
         var pay=new FlowLayoutPanel { Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new(0,8,0,0) };
-        payment.MaximumSize=new(250,0); payment.Width=240; tendered.Width=235; pay.Controls.Add(WorkflowUi.Text("Payment method",9,true)); pay.Controls.Add(payment); pay.Controls.Add(WorkflowUi.Text("Cash tendered",9,true)); pay.Controls.Add(tendered); pay.Controls.Add(delivery); pay.Controls.Add(address); pay.Controls.Add(serial);
+        payment.MaximumSize=new(250,0); payment.Width=240; tendered.Width=235; pay.Controls.Add(WorkflowUi.Text("Payment method",9,true)); pay.Controls.Add(payment); pay.Controls.Add(WorkflowUi.Text("Cash tendered",9,true)); pay.Controls.Add(tendered); using(var truck=WorkflowArt.Sprite(50))if(truck is not null)delivery.Image=new Bitmap(truck,new Size(32,32));
+        delivery.TextImageRelation=TextImageRelation.ImageBeforeText; delivery.Disposed+=(_,_)=>delivery.Image?.Dispose();
+        pay.Controls.Add(delivery); pay.Controls.Add(address); var offerHeading=new FlowLayoutPanel { AutoSize=true,WrapContents=false,Margin=new(0,5,0,0) };
+        var giftArt=new PictureBox { Size=new(32,32),SizeMode=PictureBoxSizeMode.Zoom,Image=WorkflowArt.Sprite(51) }; giftArt.Disposed+=(_,_)=>giftArt.Image?.Dispose();
+        offerHeading.Controls.Add(giftArt); offerHeading.Controls.Add(WorkflowUi.Text("Voucher / promo / gift check",9,true)); pay.Controls.Add(offerHeading); pay.Controls.Add(serial);
         pay.Controls.Add(Theme.Button("Demo offer serials",()=>DreamDialog.Show(this,string.Join("\n",Checkout.DemoOffers.Select(o=>o.Name+" · "+o.Serial))+"\nOne offer per sale, applied after the cash/charge rule. Delivery costs PHP 150. Codes are reusable classroom examples.","Classroom offers")));
         totals.MaximumSize=Size.Empty; totals.AutoSize=false; totals.Height=88; totals.Dock=DockStyle.Bottom; totals.Padding=new(4); totals.BackColor=Theme.Cream;
         var checkoutTabs=new TabControl { Dock=DockStyle.Fill }; var basketPage=new TabPage("Basket"); var paymentPage=new TabPage("Payment + delivery");
@@ -49,7 +53,7 @@ public sealed class StoreForm : WorkflowForm
         main.Controls.Add(WorkflowUi.Section("Appliance catalog",catalogPanel),0,0); main.Controls.Add(WorkflowUi.Section("Cashier overview",cashier),1,0); Split(main,receipt,270);
         payment.SelectedIndexChanged+=(_,_)=> { tendered.Enabled=payment.SelectedIndex==0; UpdateTotals(); }; tendered.ValueChanged+=(_,_)=>UpdateTotals(); payment.SelectedIndex=0;
         delivery.CheckedChanged+=(_,_)=> { address.Enabled=delivery.Checked; UpdateTotals(); }; address.TextChanged+=(_,_)=>receipt.Clear(); serial.TextChanged+=(_,_)=>UpdateTotals();
-        Command("Complete sale",Complete); Command("Remove item",()=> { Require.That(basket.SelectedRows.Count>0,"Select a basket row to remove."); cart.RemoveAt(basket.SelectedRows[0].Index); RefreshBasket(); }); Command("New sale",Reset); Command("About",()=> { using var about=new AboutForm(); about.ShowDialog(this); }); Command("Close",Close);
+        Command("Complete sale",Complete); Command("Remove item",()=> { Require.That(basket.SelectedRows.Count>0,"Select a basket row to remove."); cart.RemoveAt(basket.SelectedRows[0].Index); RefreshBasket(); }); Command("New sale",Reset); Command("About",()=> { using var about=new AboutForm(); about.ShowDialog(this); }); PlaceActions(pay);
     }
     private void RefreshBasket()
     {
@@ -90,7 +94,7 @@ public sealed class PasswordForm : WorkflowForm
         MinimumSize=new(560,350); Size=new(650,400);
         var main=WorkflowUi.Stack(); main.Padding=new(28); main.Controls.Add(WorkflowUi.Text("Welcome to the cashier",16,true)); WorkflowUi.Field(main,"Username",username); WorkflowUi.Field(main,"Password",password);
         Workspace.Controls.Add(WorkflowUi.Section("Sign in",main));
-        Command("Sign in",()=> { Require.Text(username.Text,"username"); if(!new DemoAuthService().Authenticate(username.Text,password.Text)) { if(DreamDialog.Show(this,"Incorrect demo password. Try again?","Password entry",MessageBoxButtons.RetryCancel,MessageBoxIcon.Warning)==DialogResult.Cancel)Close(); else { password.Clear(); password.Focus(); } return; } openStore(username.Text.Trim()); Close(); }); Command("Cancel",Close);
+        Command("Sign in",()=> { Require.Text(username.Text,"username"); if(!new DemoAuthService().Authenticate(username.Text,password.Text)) { if(DreamDialog.Show(this,"Incorrect demo password. Try again?","Password entry",MessageBoxButtons.RetryCancel,MessageBoxIcon.Warning)==DialogResult.Cancel)Close(); else { password.Clear(); password.Focus(); } return; } openStore(username.Text.Trim()); Close(); }); PlaceActions(main);
     }
 }
 
@@ -111,7 +115,7 @@ public sealed class ElectionForm : WorkflowForm
         tally.Columns.Add("candidate","Candidate"); tally.Columns.Add("votes","Votes"); main.Controls.Add(WorkflowUi.Section("Your classroom ballot",ballot),0,0); main.Controls.Add(WorkflowUi.Section("Live tally",tally),1,0); Split(main,receipt);
         voter.TextChanged+=(_,_)=> { validated=null; candidate.Enabled=false; candidate.SelectedIndex=-1; receipt.Clear(); };
         Command("Cast vote",()=> { Require.That(validated is not null,"Validate your voter ID first."); Require.That(candidate.SelectedIndex>=0,"Choose a candidate."); if(DreamDialog.Show(this,$"Confirm your classroom vote for {candidate.Text}?","Confirm ballot",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return; string id=validated!,choice=candidate.Text; election.Vote(id,choice); voter.Clear(); RefreshTally(); receipt.ShowDocument(new("CLASSROOM VOTE CONFIRMATION",ReceiptData.NewReference("VOTE"),DateTime.Now,[new("Voter ID",id),new("Candidate",choice)],"STATUS","RECORDED","Classroom demonstration. No real public-election vote.")); Status("Vote recorded. This voter ID cannot vote again."); });
-        Command("Show result",()=>Status(election.Result())); Command("Reset election",()=> { if(DreamDialog.Show(this,"Erase all locally saved classroom votes?","Reset",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) { election.Reset(); voter.Clear(); RefreshTally(); receipt.Clear(); } }); Command("Close",Close); RefreshTally();
+        Command("Show result",()=>Status(election.Result())); Command("Reset election",()=> { if(DreamDialog.Show(this,"Erase all locally saved classroom votes?","Reset",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) { election.Reset(); voter.Clear(); RefreshTally(); receipt.Clear(); } }); PlaceActions(ballot); RefreshTally();
     }
     private void RefreshTally() { tally.Rows.Clear(); foreach(var row in election.Tally())tally.Rows.Add(row.Key,row.Value); }
 }
@@ -125,6 +129,6 @@ public sealed class AboutForm : WorkflowForm
         var portrait=new PixelPortrait { Dock=DockStyle.Fill };
         var copy=WorkflowUi.Stack(); copy.Controls.Add(WorkflowUi.Text("A little world of your own",17,true)); copy.Controls.Add(WorkflowUi.Text("Dream OS brings nine classroom exercises into a pastel, pixel-inspired C# desktop.\n\nNative Windows Forms · .NET 10\nProject owner: ceias\n\nSupplied artwork and exercise references retain their original credits. Authentication, voting and lotto are educational simulations.",10));
         grid.Controls.Add(portrait,0,0); grid.Controls.Add(WorkflowUi.Section("About this little world",copy),1,0); Workspace.Controls.Add(grid);
-        Command("Author",()=>DreamDialog.Show(this,"Dream OS project owner: ceias\nC# OOP coursework\nOriginal exercise/reference authors retain credit for their materials.","Author")); Command("Close",Close);
+        Command("Author",()=>DreamDialog.Show(this,"Dream OS project owner: ceias\nC# OOP coursework\nOriginal exercise/reference authors retain credit for their materials.","Author")); PlaceActions(copy);
     }
 }

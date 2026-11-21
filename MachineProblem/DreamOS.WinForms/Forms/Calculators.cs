@@ -27,7 +27,7 @@ public sealed class PizzaForm : WorkflowForm
         grid.Controls.Add(WorkflowUi.Section("04 · Something to sip",WorkflowUi.Cards(drinks.ToArray())),1,1);
         var diningRow=new FlowLayoutPanel { Dock=DockStyle.Fill,WrapContents=false }; diningRow.Controls.Add(WorkflowUi.Text("Dining",9,true)); dining.Width=150; diningRow.Controls.Add(dining); dining.SelectedIndex=0; dining.SelectedIndexChanged+=(_,_)=>Changed(); grid.Controls.Add(diningRow,0,2); grid.SetColumnSpan(diningRow,2);
         Split(grid,receipt);
-        Command("Build order",Compute); Command("Clear toppings",()=> { toppings.Clear(); Changed(); }); Command("Start over",Reset); Command("Close",Close); Changed();
+        Command("Build order",Compute); Command("Clear toppings",()=> { toppings.Clear(); Changed(); }); Command("Start over",Reset); PlaceActions(receipt); Changed();
     }
     private void Changed()
     {
@@ -65,7 +65,7 @@ public sealed class LottoForm : WorkflowForm
         main.Controls.Add(WorkflowUi.Text("03 · Winning numbers",12,true)); winners.Size=new(410,85); main.Controls.Add(winners);
         var rules=WorkflowUi.Text("Exact order: fictional PHP 1,000,000 jackpot.\nSame digits, different order: demo bet × 1,000.\nEvery draw uses three different digits.",9); main.Controls.Add(rules);
         bet.ValueChanged+=(_,_)=>receipt.Clear(); Split(WorkflowUi.Section("Your demo ticket",main),receipt);
-        Command("Place bet + draw",Draw); Command("New ticket",()=> { if(drawing)return; for(int i=0;i<3;i++)digits[i].Value=i; bet.Value=10; winners.Clear(); receipt.Clear(); }); Command("Close",Close);
+        Command("Place bet + draw",Draw); Command("New ticket",()=> { if(drawing)return; for(int i=0;i<3;i++)digits[i].Value=i; bet.Value=10; winners.Clear(); receipt.Clear(); }); PlaceActions(main);
     }
     private bool drawing;
     private void Draw()
@@ -126,7 +126,7 @@ public sealed class TuitionForm : WorkflowForm
         foreach(var y in Enum.GetValues<YearLevel>())fees.Rows.Add(y,Money.Format(new TuitionService().Calculate(Course.BSIT,y,3,0).Miscellaneous),Money.Format(new TuitionService().Calculate(Course.BSA,y,3,0).Miscellaneous));
         grid.Controls.Add(WorkflowUi.Section("Fee schedule",fees),0,1); grid.SetColumnSpan(fees,2); Split(grid,receipt);
         course.SelectedIndexChanged+=(_,_)=>receipt.Clear(); year.SelectedIndexChanged+=(_,_)=>receipt.Clear(); units.ValueChanged+=(_,_)=>receipt.Clear(); labs.ValueChanged+=(_,_)=>receipt.Clear(); student.TextChanged+=(_,_)=>receipt.Clear();
-        Command("Assess fees",Compute); Command("Clear",()=> { student.Clear(); course.SelectedIndex=year.SelectedIndex=-1; units.Value=3; labs.Value=0; receipt.Clear(); }); Command("Close",Close);
+        Command("Assess fees",Compute); Command("Clear",()=> { student.Clear(); course.SelectedIndex=year.SelectedIndex=-1; units.Value=3; labs.Value=0; receipt.Clear(); }); PlaceActions(academic);
     }
     private void Compute()
     {
@@ -152,7 +152,7 @@ public sealed class PayrollForm : WorkflowForm
         work.Controls.Add(WorkflowUi.Text("Deductions follow the reference SSS brackets.\nSingle: 10% tax\nMarried / Widowed: 5% tax",9));
         grid.Controls.Add(WorkflowUi.Section("Employee profile",profile),0,0); grid.Controls.Add(WorkflowUi.Section("Pay period + attendance",work),1,0); Split(grid,receipt);
         employee.SelectedIndexChanged+=(_,_)=>receipt.Clear(); position.SelectedIndexChanged+=(_,_)=>receipt.Clear(); status.SelectedIndexChanged+=(_,_)=>receipt.Clear(); days.ValueChanged+=(_,_)=>receipt.Clear(); period.ValueChanged+=(_,_)=>receipt.Clear();
-        Command("Generate payslip",Compute); Command("Clear",()=> { employee.SelectedIndex=position.SelectedIndex=status.SelectedIndex=-1; days.Value=20; period.Value=DateTime.Today; receipt.Clear(); }); Command("Close",Close);
+        Command("Generate payslip",Compute); Command("Clear",()=> { employee.SelectedIndex=position.SelectedIndex=status.SelectedIndex=-1; days.Value=20; period.Value=DateTime.Today; receipt.Clear(); }); PlaceActions(work);
     }
     private void Compute()
     {
@@ -188,7 +188,7 @@ public sealed class HotelForm : WorkflowForm
         tabs.TabPages.AddRange([guestPage,datesPage,payPage]); Split(tabs,receipt);
         checkOut.SetDate(DateTime.Today.AddDays(1)); checkOut.MinDate=checkIn.SelectionStart;
         capacity.SelectedIndexChanged+=(_,_)=>Changed(); room.SelectedIndexChanged+=(_,_)=>Changed(); payment.SelectedIndexChanged+=(_,_)=>Changed(); checkIn.DateChanged+=(_,_)=> { checkOut.MinDate=checkIn.SelectionStart.Date; Changed(); }; checkOut.DateChanged+=(_,_)=>Changed(); customer.TextChanged+=(_,_)=>receipt.Clear(); contact.TextChanged+=(_,_)=>receipt.Clear();
-        Command("Create guest folio",Compute); Command("New guest",()=> { customer.Clear(); contact.Clear(); capacity.SelectedIndex=room.SelectedIndex=payment.SelectedIndex=-1; checkIn.SetDate(DateTime.Today); checkOut.SetDate(DateTime.Today.AddDays(1)); Changed(); }); Command("Close",Close);
+        Command("Create guest folio",Compute); Command("New guest",()=> { customer.Clear(); contact.Clear(); capacity.SelectedIndex=room.SelectedIndex=payment.SelectedIndex=-1; checkIn.SetDate(DateTime.Today); checkOut.SetDate(DateTime.Today.AddDays(1)); Changed(); }); PlaceActions(overview);
     }
     private void Changed()
     {

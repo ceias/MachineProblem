@@ -49,13 +49,28 @@ public class WorkflowForm : RetroForm
         hint.Text=subtitle; text.Controls.Add(hint); text.Controls.Add(heading);
         var icon=CardIcons.Picture(CardIcons.For(title),42); icon.Dock=DockStyle.Left; icon.Width=56;
         header.Controls.Add(text); header.Controls.Add(icon);
-        Controls.Add(Workspace); Controls.Add(commands); Controls.Add(header);
+        Controls.Add(Workspace); Controls.Add(header);
     }
     protected void Split(Control main,Control side,int sideWidth=280)
     {
         var grid=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=new(0) };
         grid.ColumnStyles.Add(new(SizeType.Percent,100)); grid.ColumnStyles.Add(new(SizeType.Absolute,sideWidth)); grid.RowStyles.Add(new(SizeType.Percent,100));
         main.Dock=side.Dock=DockStyle.Fill; grid.Controls.Add(main,0,0); grid.Controls.Add(side,1,0); Workspace.Controls.Add(grid);
+    }
+    // Keep task actions beside the final review instead of in a detached window footer.
+    protected void PlaceActions(Control host)
+    {
+        var card=new IconCardPanel { Padding=new(8), Margin=new(0,10,0,6), AutoSize=true, AutoSizeMode=AutoSizeMode.GrowAndShrink, Width=280, Height=60 };
+        var title=WorkflowUi.Text("READY WHEN YOU ARE",9,true); title.ForeColor=Theme.Accent; title.Dock=DockStyle.Top; title.AutoSize=false; title.Height=24;
+        commands.Dock=DockStyle.Top; commands.AutoSize=true; commands.AutoSizeMode=AutoSizeMode.GrowAndShrink; commands.WrapContents=true; commands.AutoScroll=false; commands.Padding=new(0); commands.BackColor=card.BackColor;
+        card.Controls.Add(commands); card.Controls.Add(title);
+        if(host is FlowLayoutPanel) { card.Dock=DockStyle.None; } else card.Dock=DockStyle.Bottom;
+        void Fit()
+        {
+            int width=Math.Max(150,host.ClientSize.Width-host.Padding.Horizontal-SystemInformation.VerticalScrollBarWidth-8);
+            card.Width=width; commands.MaximumSize=new(Math.Max(130,width-card.Padding.Horizontal),0);
+        }
+        host.Controls.Add(card); host.ClientSizeChanged+=(_,_)=>Fit(); Fit();
     }
     protected Button Command(string title,Action action)
     {
@@ -111,9 +126,21 @@ public static class WorkflowArt
         string path=Path.Combine(AppContext.BaseDirectory,"Assets","WorkflowSprites.png");
         if(!File.Exists(path))return null; using var image=Image.FromFile(path); return new Bitmap(image);
     });
-    static WorkflowArt()=>Application.ApplicationExit+=(_,_)=> { if(Atlas.IsValueCreated)Atlas.Value?.Dispose(); };
+    private static readonly Lazy<Bitmap?> Services=new(()=>
+    {
+        string path=Path.Combine(AppContext.BaseDirectory,"Assets","ServiceSprites.png");
+        if(!File.Exists(path))return null; using var image=Image.FromFile(path); return new Bitmap(image);
+    });
+    static WorkflowArt()=>Application.ApplicationExit+=(_,_)=> { if(Atlas.IsValueCreated)Atlas.Value?.Dispose(); if(Services.IsValueCreated)Services.Value?.Dispose(); };
     public static Bitmap? Sprite(int index)
     {
+        if(index>=40&&index<52)
+        {
+            var sheet=Services.Value; if(sheet is null)return null;
+            int cell=index-40,serviceCol=cell%4,serviceRow=cell/4;
+            var bounds=new Rectangle(serviceCol*sheet.Width/4,serviceRow*sheet.Height/3,(serviceCol+1)*sheet.Width/4-serviceCol*sheet.Width/4,(serviceRow+1)*sheet.Height/3-serviceRow*sheet.Height/3);
+            return sheet.Clone(bounds,System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        }
         if(index<0||index>=30)return null;
         var atlas=Atlas.Value; if(atlas is null)return null; int col=index%6,row=index/6;
         int x=col*atlas.Width/6,y=row*atlas.Height/5,w=(col+1)*atlas.Width/6-x,h=(row+1)*atlas.Height/5-y;
