@@ -38,7 +38,7 @@ public sealed class StoreForm : WorkflowForm
         var cashier=new Panel { Dock=DockStyle.Fill,Padding=new(8),BackColor=Color.FromArgb(247,234,242) };
         var operatorLabel=WorkflowUi.Text("CASHIER\nOperator: "+username,9,true); operatorLabel.AutoSize=false; operatorLabel.Height=43; operatorLabel.Dock=DockStyle.Top;
         basket.Columns.Add("product","Item"); basket.Columns.Add("quantity","Qty"); basket.Columns.Add("amount","Amount"); basket.Columns[0].FillWeight=54; basket.Columns[1].FillWeight=14; basket.Columns[2].FillWeight=32;
-        basket.DefaultCellStyle.Font=new("Tahoma",9); basket.DefaultCellStyle.WrapMode=DataGridViewTriState.True; basket.DefaultCellStyle.SelectionBackColor=Theme.Blue; basket.DefaultCellStyle.SelectionForeColor=Theme.Ink;
+        basket.DefaultCellStyle.Font=new("Segoe UI",9); basket.DefaultCellStyle.WrapMode=DataGridViewTriState.True; basket.DefaultCellStyle.SelectionBackColor=Theme.Blue; basket.DefaultCellStyle.SelectionForeColor=Theme.Ink;
         var pay=new FlowLayoutPanel { Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false,Padding=new(0,8,0,0) };
         payment.MaximumSize=new(250,0); payment.Width=240; tendered.Width=235; pay.Controls.Add(WorkflowUi.Text("Payment method",9,true)); pay.Controls.Add(payment); pay.Controls.Add(WorkflowUi.Text("Cash tendered",9,true)); pay.Controls.Add(tendered); using(var truck=WorkflowArt.Sprite(50))if(truck is not null)delivery.Image=new Bitmap(truck,new Size(32,32));
         delivery.TextImageRelation=TextImageRelation.ImageBeforeText; delivery.Disposed+=(_,_)=>delivery.Image?.Dispose();

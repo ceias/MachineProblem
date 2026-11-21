@@ -114,7 +114,7 @@ public static class Artwork
         {
             Colors = login
                 ? [Color.FromArgb(248,208,229), Color.FromArgb(244,206,230), Color.FromArgb(238,179,212)]
-                : [Color.FromArgb(170,203,237), Color.FromArgb(216,199,231), Color.FromArgb(244,191,217)],
+                : [Color.FromArgb(190,177,244), Color.FromArgb(230,197,241), Color.FromArgb(249,199,220)],
             Positions = [0f, .58f, 1f]
         };
         g.FillRectangle(gradient,bounds);
@@ -150,6 +150,18 @@ public static class Artwork
             g.FillRectangle(brush,x-r,y,r*2+1,1); g.FillRectangle(brush,x,y-r,1,r*2+1);
             if(r==5)g.FillRectangle(brush,x-1,y-1,3,3);
         }
+        if(!login)
+        {
+            using var branch=new Pen(Color.FromArgb(123,70,103),5);
+            g.DrawLines(branch,[new Point(0,100),new Point(65,60),new Point(130,15),new Point(170,0)]);
+            g.DrawLines(branch,[new Point(30,80),new Point(15,30),new Point(0,8)]);
+            using var petals=new SolidBrush(Color.FromArgb(255,221,239)); using var center=new SolidBrush(Color.FromArgb(231,116,166));
+            for(int i=0;i<17;i++)
+            {
+                int x=(i*43+12)%165,y=(i*29+7)%82;
+                g.FillRectangle(petals,x-9,y-3,20,8); g.FillRectangle(petals,x-3,y-9,8,20); g.FillRectangle(center,x-1,y-1,4,4);
+            }
+        }
         g.Restore(state);
     }
 
@@ -183,7 +195,7 @@ public sealed class WallpaperPanel : Panel
             using var canvas=Graphics.FromImage(wallpaper); Artwork.Wallpaper(canvas,ClientRectangle,LoginStyle);
             if(ShowDesktopBrand)
             {
-                using var eyebrow=new Font("Tahoma",8,FontStyle.Bold); using var logo=new Font("Consolas",26,FontStyle.Bold); using var detail=new Font("Tahoma",10);
+                using var eyebrow=new Font("Segoe UI",8,FontStyle.Bold); using var logo=new Font("Consolas",26,FontStyle.Bold); using var detail=new Font("Segoe UI",10);
                 using var ink=new SolidBrush(Theme.Ink); using var muted=new SolidBrush(Color.FromArgb(113,99,137));
                 canvas.DrawString("YOUR PERSONAL LITTLE UNIVERSE",eyebrow,muted,256,24);
                 canvas.DrawString("DREAM OS",logo,ink,251,42);
@@ -222,9 +234,9 @@ public sealed class DesktopCalendarCard : Button
     protected override void OnPaint(PaintEventArgs e)
     {
         var g=e.Graphics; g.Clear(Color.FromArgb(255,247,249));
-        ControlPaint.DrawBorder(g,ClientRectangle,Color.FromArgb(195,166,196),ButtonBorderStyle.Solid);
+        DreamStyle.Surface(g,ClientRectangle,Color.White,Color.FromArgb(254,226,246));
         float s=DeviceDpi/96f; int S(int x)=>(int)(x*s);
-        using var tiny=new Font("Tahoma",7.5f,FontStyle.Bold); using var day=new Font("Consolas",32,FontStyle.Bold); using var time=new Font("Consolas",20,FontStyle.Bold); using var text=new Font("Tahoma",9);
+        using var tiny=new Font("Segoe UI",7.5f,FontStyle.Bold); using var day=new Font("Consolas",32,FontStyle.Bold); using var time=new Font("Consolas",20,FontStyle.Bold); using var text=new Font("Segoe UI",9);
         TextRenderer.DrawText(g,"TODAY IN YOUR LITTLE WORLD",tiny,new Rectangle(S(13),S(12),Width-S(26),S(16)),Theme.Accent,TextFormatFlags.NoPadding);
         TextRenderer.DrawText(g,DateTime.Now.ToString("dd"),day,new Rectangle(S(11),S(35),S(68),S(52)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter);
         TextRenderer.DrawText(g,DateTime.Now.ToString("MMM").ToUpperInvariant(),tiny,new Rectangle(S(11),S(87),S(68),S(15)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter);

@@ -7,7 +7,7 @@ namespace DreamOS.WinForms.Controls;
 
 public static class WorkflowUi
 {
-    public static Label Text(string value,float size=10,bool bold=false)=>new() { Text=value,AutoSize=true,Font=new("Tahoma",size,bold?FontStyle.Bold:FontStyle.Regular),ForeColor=Theme.Ink,Margin=new(0,0,0,6),MaximumSize=new(600,0) };
+    public static Label Text(string value,float size=10,bool bold=false)=>new() { Text=value,AutoSize=true,Font=new("Segoe UI",size,bold?FontStyle.Bold:FontStyle.Regular),ForeColor=Theme.Ink,Margin=new(0,0,0,6),MaximumSize=new(600,0) };
     public static TableLayoutPanel Grid(int columns=2)
     {
         var grid=new TableLayoutPanel { Dock=DockStyle.Fill,ColumnCount=columns,Padding=new(0),Margin=new(0),AutoScroll=true };
@@ -18,7 +18,7 @@ public static class WorkflowUi
     public static Panel Section(string title,Control content)
     {
         var panel=new IconCardPanel { Dock=DockStyle.Fill,Padding=new(8),Margin=new(4) };
-        var header=new Panel { Dock=DockStyle.Top,Height=26,BackColor=panel.BackColor };
+        var header=new Panel { Dock=DockStyle.Top,Height=30,BackColor=Color.FromArgb(248,230,247) };
         var label=Text(title,10,true); label.Dock=DockStyle.Fill; label.AutoSize=false; label.TextAlign=ContentAlignment.MiddleLeft;
         var icon=CardIcons.Picture(CardIcons.For(title),24); icon.Dock=DockStyle.Left; icon.Width=32;
         header.Controls.Add(label); header.Controls.Add(icon);
@@ -38,7 +38,7 @@ public class WorkflowForm : RetroForm
 {
     protected Panel Workspace { get; }=new() { Dock=DockStyle.Fill,Padding=new(10) };
     private readonly Panel commands=new() { BackColor=Theme.Cream };
-    private readonly Label hint=new() { Dock=DockStyle.Bottom,Height=23,AutoEllipsis=true,ForeColor=Color.FromArgb(114,98,128),Font=new("Tahoma",9) };
+    private readonly Label hint=new() { Dock=DockStyle.Bottom,Height=23,AutoEllipsis=true,ForeColor=Color.FromArgb(114,98,128),Font=new("Segoe UI",9) };
     public WorkflowForm() : this("Dream OS","Choose your options to get started.") { }
     protected WorkflowForm(string title,string subtitle) : base(title)
     {
@@ -119,7 +119,7 @@ public sealed class ChoiceCard : Button
     public ChoiceCard(string title,string description,int spriteIndex,Action action)
     {
         Text=title; symbol=spriteIndex; this.description=description; sprite=WorkflowArt.Sprite(spriteIndex);
-        Size=new(102,94); Margin=new(3); Font=new("Tahoma",9); FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; UseVisualStyleBackColor=false;
+        Size=new(102,94); Margin=new(3); Font=new("Segoe UI",9); FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; UseVisualStyleBackColor=false;
         AccessibleName=title+" "+description; Click+=(_,_)=>action();
         SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);
     }
@@ -127,13 +127,13 @@ public sealed class ChoiceCard : Button
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.Clear(selected?Color.FromArgb(252,222,234):Color.FromArgb(255,251,248));
-        ControlPaint.DrawBorder(e.Graphics,ClientRectangle,selected?Theme.Accent:Color.FromArgb(220,205,218),selected?2:1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid,selected?Theme.Accent:Color.FromArgb(220,205,218),1,ButtonBorderStyle.Solid);
+        DreamStyle.Surface(e.Graphics,ClientRectangle,selected?Color.FromArgb(255,225,243):Color.White,selected?Color.FromArgb(247,184,219):Theme.Cream,selected,8);
         int S(int value)=>LogicalToDeviceUnits(value);
         int imageHeight=(int)(Height*.5f),textTop=imageHeight+S(6),footer=S(18);
         if(sprite is null) DrawSymbol(e.Graphics,new Rectangle((Width-imageHeight)/2,S(4),imageHeight,imageHeight));
         if(sprite is not null) { e.Graphics.InterpolationMode=InterpolationMode.NearestNeighbor; e.Graphics.DrawImage(sprite,new Rectangle((Width-imageHeight)/2,S(4),imageHeight,imageHeight)); }
         TextRenderer.DrawText(e.Graphics,Text,Font,new Rectangle(S(3),textTop,Width-S(6),Math.Max(1,Height-textTop-footer-S(3))),Theme.Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
-        using var small=new Font("Tahoma",8); TextRenderer.DrawText(e.Graphics,description,small,new Rectangle(S(3),Height-footer,Width-S(6),footer-S(2)),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.NoPadding|TextFormatFlags.EndEllipsis);
+        using var small=new Font("Segoe UI",8); TextRenderer.DrawText(e.Graphics,description,small,new Rectangle(S(3),Height-footer,Width-S(6),footer-S(2)),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.NoPadding|TextFormatFlags.EndEllipsis);
         if(Focused&&ShowFocusCues)ControlPaint.DrawFocusRectangle(e.Graphics,Rectangle.Inflate(ClientRectangle,-4,-4));
     }
     private void DrawSymbol(Graphics g,Rectangle r)

@@ -13,7 +13,7 @@ public sealed class DreamDialog : RetroForm
         var content=new Panel { Dock=DockStyle.Fill,Padding=new(17),BackColor=Theme.Cream };
         var card=new IconCardPanel { Dock=DockStyle.Fill,Padding=new(16) };
         var heading=WorkflowUi.Text(title,15,true); heading.AutoSize=false; heading.Dock=DockStyle.Top; heading.Height=38; heading.ForeColor=Theme.Accent;
-        var message=new TextBox { Text=text,Multiline=true,ReadOnly=true,BorderStyle=BorderStyle.None,Dock=DockStyle.Fill,BackColor=Color.FromArgb(255,251,249),ForeColor=Theme.Ink,ScrollBars=ScrollBars.Vertical,Font=new("Tahoma",10),AccessibleName=title+" message",TabStop=true };
+        var message=new TextBox { Text=text,Multiline=true,ReadOnly=true,BorderStyle=BorderStyle.None,Dock=DockStyle.Fill,BackColor=Color.FromArgb(255,251,249),ForeColor=Theme.Ink,ScrollBars=ScrollBars.Vertical,Font=new("Segoe UI",10),AccessibleName=title+" message",TabStop=true };
         var symbol=new DialogSymbol(icon) { Dock=DockStyle.Left,Width=68 };
         var body=new Panel { Dock=DockStyle.Fill,BackColor=Color.FromArgb(255,251,249) }; body.Controls.Add(message); body.Controls.Add(symbol);
         card.Controls.Add(body); card.Controls.Add(heading); content.Controls.Add(card);
@@ -52,7 +52,7 @@ public sealed class DreamDialog : RetroForm
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e); var r=new Rectangle(3,6,47,47); using var fill=new SolidBrush(Color.FromArgb(250,221,234)); using var pen=new Pen(Theme.Accent,2); e.Graphics.FillEllipse(fill,r); e.Graphics.DrawEllipse(pen,r);
-            using var font=new Font("Tahoma",24,FontStyle.Bold); string glyph=icon is MessageBoxIcon.Warning or MessageBoxIcon.Error?"!":icon==MessageBoxIcon.Question?"?":"♥";
+            using var font=new Font("Segoe UI",24,FontStyle.Bold); string glyph=icon is MessageBoxIcon.Warning or MessageBoxIcon.Error?"!":icon==MessageBoxIcon.Question?"?":"♥";
             TextRenderer.DrawText(e.Graphics,glyph,font,r,Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.NoPadding);
         }
     }

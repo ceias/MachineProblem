@@ -6,8 +6,8 @@ using DreamOS.WinForms.Controls;
 namespace DreamOS.WinForms.Forms;
 public sealed class LoginForm : RetroForm
 {
-    private readonly TextBox username=new() { BorderStyle=BorderStyle.None, MaxLength=60, AccessibleName="Username", PlaceholderText="username", Font=new("Tahoma",12) };
-    private readonly TextBox password=new() { BorderStyle=BorderStyle.None, UseSystemPasswordChar=true, MaxLength=100, AccessibleName="Password", PlaceholderText="password", Font=new("Tahoma",12) };
+    private readonly TextBox username=new() { BorderStyle=BorderStyle.None, MaxLength=60, AccessibleName="Username", PlaceholderText="username", Font=new("Segoe UI",12) };
+    private readonly TextBox password=new() { BorderStyle=BorderStyle.None, UseSystemPasswordChar=true, MaxLength=100, AccessibleName="Password", PlaceholderText="password", Font=new("Segoe UI",12) };
     public string Username=>username.Text.Trim();
     public event EventHandler? Authenticated;
     public LoginForm() : base("Dream OS Login")
@@ -17,11 +17,11 @@ public sealed class LoginForm : RetroForm
         var card=new IconCardPanel { Size=new(350,535), BackColor=Color.FromArgb(255,239,246) };
         var badge=new HeartBadge { Bounds=new(125,0,100,100) };
         var heading=new Label { Text="DREAM OS", Font=new("Consolas",28,FontStyle.Bold), ForeColor=Color.FromArgb(203,65,116), BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,110,350,48) };
-        var subtitle=new Label { Text="Please login to continue…", Font=new("Tahoma",11), ForeColor=Theme.Ink, BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,164,350,25) };
+        var subtitle=new Label { Text="Please login to continue…", Font=new("Segoe UI",11), ForeColor=Theme.Ink, BackColor=Color.Transparent, TextAlign=ContentAlignment.MiddleCenter, Bounds=new(0,164,350,25) };
         var nameField=new LoginField(username,false) { Bounds=new(15,213,320,45), TabIndex=0 };
         var passField=new LoginField(password,true) { Bounds=new(15,276,320,45), TabIndex=1 };
         bool registering=false;
-        var confirm=new TextBox { BorderStyle=BorderStyle.None, UseSystemPasswordChar=true, MaxLength=100, AccessibleName="Confirm password", PlaceholderText="confirm password", Font=new("Tahoma",12) };
+        var confirm=new TextBox { BorderStyle=BorderStyle.None, UseSystemPasswordChar=true, MaxLength=100, AccessibleName="Confirm password", PlaceholderText="confirm password", Font=new("Segoe UI",12) };
         var confirmField=new LoginField(confirm,true) { Bounds=new(15,330,320,45), Visible=false, TabIndex=2 };
         var error=new Label { Bounds=new(15,478,320,50), TextAlign=ContentAlignment.MiddleCenter, ForeColor=Theme.Accent, BackColor=Color.Transparent };
         var submit=Theme.Button("Login",()=>
@@ -47,7 +47,7 @@ public sealed class LoginForm : RetroForm
             { DreamDialog.Show(this,"Could not connect to the DreamOS SQL Server database. Check that SQL Server Express LocalDB is installed and available, or configure DREAMOS_SQL_CONNECTION for your SQL Server.","Account database",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
 
         });
-        submit.AutoSize=false; submit.Bounds=new(78,392,194,42); submit.BackColor=Color.FromArgb(239,111,163); submit.ForeColor=Color.White; submit.Font=new("Tahoma",12,FontStyle.Bold); submit.TabIndex=3;
+        submit.AutoSize=false; submit.Bounds=new(78,392,194,42); submit.BackColor=Color.FromArgb(239,111,163); submit.ForeColor=Color.White; submit.Font=new("Segoe UI",12,FontStyle.Bold); submit.TabIndex=3;
         var switchMode=Theme.Button("Create account / Sign in",()=>
         {
             registering=!registering; confirmField.Visible=registering;
@@ -57,7 +57,7 @@ public sealed class LoginForm : RetroForm
         switchMode.AutoSize=false; switchMode.Bounds=new(60,440,230,30); switchMode.TabIndex=4;
         card.Controls.AddRange([badge,heading,subtitle,nameField,passField,confirmField,submit,switchMode,error]);
         var guide=new PixelPortrait { Size=new(125,205), Anchor=AnchorStyles.Left|AnchorStyles.Bottom };
-        var footer=new Label { Text="♥  Insert your dreams here…  ♥", AutoSize=false, Height=33, BackColor=Theme.Cream, ForeColor=Theme.Accent, Dock=DockStyle.Bottom, TextAlign=ContentAlignment.MiddleCenter, Font=new("Tahoma",10) };
+        var footer=new Label { Text="♥  Insert your dreams here…  ♥", AutoSize=false, Height=33, BackColor=Theme.Cream, ForeColor=Theme.Accent, Dock=DockStyle.Bottom, TextAlign=ContentAlignment.MiddleCenter, Font=new("Segoe UI",10) };
         var hint=new Label { Text="Local accounts • Create an account to begin", Height=25, BackColor=Color.Transparent, ForeColor=Theme.Accent, TextAlign=ContentAlignment.MiddleCenter };
         scene.Controls.Add(card); scene.Controls.Add(guide); scene.Controls.Add(hint); scene.Controls.Add(footer); Controls.Add(scene); AcceptButton=submit;
         scene.Layout+=(_,_)=>

@@ -5,7 +5,7 @@ namespace DreamOS.WinForms.Controls;
 
 public static class Theme
 {
-    public static readonly Color Pink = Color.FromArgb(247,195,214), Cream = Color.FromArgb(255,245,240), Blue = Color.FromArgb(156,201,238), Ink = Color.FromArgb(41,40,61), Accent = Color.FromArgb(168,55,99);
+    public static readonly Color Pink = Color.FromArgb(249,199,220), Cream = Color.FromArgb(255,249,251), Blue = Color.FromArgb(185,216,255), Ink = Color.FromArgb(48,25,65), Accent = Color.FromArgb(164,40,108);
     public static Button Button(string text, Action action)
     {
         var b = new RetroButton { Text=text, AutoSize=true, MinimumSize=new(100,34), BackColor=Pink, ForeColor=Ink, Margin=new(5), Padding=new(10,4,10,4), UseVisualStyleBackColor=false };
@@ -14,11 +14,38 @@ public static class Theme
     public static Label Label(string text) => new() { Text=text, AutoSize=true, MaximumSize=new(620,0), Margin=new(5,8,5,8), ForeColor=Ink, BackColor=Color.Transparent };
     public static ComboBox Choice(IEnumerable<string> items)
     {
-        var c=new ComboBox { DropDownStyle=ComboBoxStyle.DropDownList, Width=220, Margin=new(5), AccessibleName="Selection", BackColor=Color.White, FlatStyle=FlatStyle.Standard }; c.Items.AddRange(items.Cast<object>().ToArray()); return c;
+        var c=new ComboBox { DropDownStyle=ComboBoxStyle.DropDownList, Width=220, Margin=new(5), AccessibleName="Selection", BackColor=Cream, ForeColor=Ink, FlatStyle=FlatStyle.Flat }; c.Items.AddRange(items.Cast<object>().ToArray()); return c;
     }
     public static ComboBox Choice<T>() where T:struct,Enum => Choice(Enum.GetNames<T>().Select(n=>System.Text.RegularExpressions.Regex.Replace(n,"([a-z])([A-Z])","$1 $2")));
     public static T Selected<T>(ComboBox c) where T:struct,Enum => c.SelectedItem is string s && Enum.TryParse<T>(s.Replace(" ",""),out var v) ? v : throw new ArgumentException($"Select {c.AccessibleName}.");
-    public static NumericUpDown Number(decimal min,decimal max,decimal value=0,int decimals=0) => new() { Minimum=min, Maximum=max, Value=Math.Clamp(value,min,max), DecimalPlaces=decimals, Width=150, Margin=new(5), ThousandsSeparator=true };
+    public static NumericUpDown Number(decimal min,decimal max,decimal value=0,int decimals=0) => new() { Minimum=min, Maximum=max, Value=Math.Clamp(value,min,max), DecimalPlaces=decimals, Width=150, Margin=new(5), ThousandsSeparator=true, BackColor=Cream, ForeColor=Ink, BorderStyle=BorderStyle.FixedSingle };
+    public static void StyleInputs(Control root)
+    {
+        foreach(Control child in root.Controls)
+        {
+            if(child is TextBoxBase text) { text.BackColor=Cream; text.ForeColor=Ink; if(text.BorderStyle!=BorderStyle.None)text.BorderStyle=BorderStyle.FixedSingle; }
+            if(child is ComboBox combo) { combo.BackColor=Cream; combo.ForeColor=Ink; combo.FlatStyle=FlatStyle.Flat; }
+            if(child is NumericUpDown number) { number.BackColor=Cream; number.ForeColor=Ink; number.BorderStyle=BorderStyle.FixedSingle; }
+            if(child is DataGridView table)
+            {
+                table.EnableHeadersVisualStyles=false; table.BackgroundColor=Cream; table.BorderStyle=BorderStyle.None;
+                table.GridColor=Color.FromArgb(234,210,231); table.ColumnHeadersDefaultCellStyle.BackColor=Color.FromArgb(249,217,239); table.ColumnHeadersDefaultCellStyle.ForeColor=Ink;
+                table.DefaultCellStyle.BackColor=Cream; table.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(255,238,248);
+                table.DefaultCellStyle.SelectionBackColor=Pink; table.DefaultCellStyle.SelectionForeColor=Ink;
+            }
+            if(child is TabControl tabs)
+            {
+                tabs.DrawMode=TabDrawMode.OwnerDrawFixed; tabs.Padding=new(12,7);
+                tabs.DrawItem+=(_,e)=>
+                {
+                    bool active=e.Index==tabs.SelectedIndex;
+                    DreamStyle.Surface(e.Graphics,e.Bounds,Color.White,active?Pink:Color.FromArgb(238,227,248),active,5);
+                    TextRenderer.DrawText(e.Graphics,tabs.TabPages[e.Index].Text,tabs.Font,e.Bounds,Ink,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+                };
+            }
+            StyleInputs(child);
+        }
+    }
     public static void Guard(IWin32Window owner,Action action)
     {
         try { action(); }
@@ -44,7 +71,10 @@ public class RetroButton : Button
     {
         var g=e.Graphics; var rect=ClientRectangle;
         using var fill=new LinearGradientBrush(rect,hovered?Color.White:ControlPaint.Light(BackColor),pressed?Theme.Pink:BackColor,LinearGradientMode.Vertical);
-        g.FillRectangle(fill,rect); Theme.Bevel(g,rect,pressed);
+        g.Clear(Parent?.BackColor??Theme.Cream);
+        var top=Enabled?(pressed?Color.FromArgb(222,139,187):hovered?Color.White:Color.FromArgb(255,235,248)):Color.FromArgb(235,227,239);
+        var bottom=Enabled?(pressed?Color.FromArgb(237,177,211):hovered?Color.FromArgb(255,206,233):BackColor):Color.FromArgb(222,211,228);
+        DreamStyle.Surface(g,rect,top,bottom,Focused||pressed,LogicalToDeviceUnits(8));
         int iconSize=LogicalToDeviceUnits(22), inset=LogicalToDeviceUnits(7);
         if(Image is not null) { g.InterpolationMode=InterpolationMode.NearestNeighbor; g.DrawImage(Image,new Rectangle(inset,(Height-iconSize)/2,iconSize,iconSize)); }
         var textArea=new Rectangle(Image is null?inset:iconSize+inset*2,4,Width-(Image is null?inset*2:iconSize+inset*3),Height-8);
@@ -62,7 +92,7 @@ public sealed class DesktopShortcutButton : Button
     {
         SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.Opaque,true);
         FlatStyle=FlatStyle.Flat; FlatAppearance.BorderSize=0; UseVisualStyleBackColor=false; Cursor=Cursors.Hand;
-        Font=new("Tahoma",9.5f); TabStop=true;
+        Font=new("Segoe UI",9.5f); TabStop=true;
     }
     protected override void OnPaintBackground(PaintEventArgs e) { }
     protected override void OnMouseEnter(EventArgs e) { hovered=true; Invalidate(); base.OnMouseEnter(e); }
@@ -106,7 +136,7 @@ internal sealed class WindowCaptionButton : Button
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.Clear(glyph==CaptionAction.Close?(hovered?Color.FromArgb(244,158,185):Color.FromArgb(251,203,218)):(hovered?Color.White:Color.FromArgb(224,235,253)));
-        ControlPaint.DrawBorder(e.Graphics,ClientRectangle,Color.FromArgb(108,131,170),ButtonBorderStyle.Solid);
+        DreamStyle.Surface(e.Graphics,ClientRectangle,Color.White,glyph==CaptionAction.Close?Color.FromArgb(248,175,212):Theme.Blue,hovered,4);
         float s=DeviceDpi/96f,cx=Width/2f,cy=Height/2f,r=4*s;
         using var pen=new Pen(Color.FromArgb(54,53,83),Math.Max(1.5f,s*1.5f));
         if(glyph==CaptionAction.Minimize)e.Graphics.DrawLine(pen,cx-r,cy+r/2,cx+r,cy+r/2);
@@ -118,7 +148,7 @@ internal sealed class WindowCaptionButton : Button
 
 public sealed class RetroTitleBar : Panel
 {
-    private readonly Label caption=new() { Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleLeft, BackColor=Color.Transparent, Padding=new(8,0,0,0), Font=new("Tahoma",10,FontStyle.Bold) };
+    private readonly Label caption=new() { Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleLeft, BackColor=Color.Transparent, Padding=new(8,0,0,0), Font=new("Segoe UI",10,FontStyle.Bold) };
     private readonly Button minimize,maximize;
     private readonly FlowLayoutPanel actions=new() { Dock=DockStyle.Right,Width=98,FlowDirection=FlowDirection.LeftToRight,WrapContents=false,BackColor=Color.Transparent,Padding=new(0,1,0,0) };
     private readonly RetroForm owner;
@@ -150,7 +180,7 @@ public sealed class RetroTitleBar : Panel
     }
     protected override void OnPaintBackground(PaintEventArgs e)
     {
-        using var fill=new LinearGradientBrush(ClientRectangle,Color.FromArgb(137,181,240),Color.FromArgb(194,222,249),LinearGradientMode.Horizontal); e.Graphics.FillRectangle(fill,ClientRectangle); Theme.Bevel(e.Graphics,ClientRectangle);
+        DreamStyle.Surface(e.Graphics,ClientRectangle,Color.FromArgb(235,243,255),Color.FromArgb(167,197,255),false,5);
     }
     private static class Native
     {
@@ -171,7 +201,7 @@ public class RetroForm : Form
     public RetroForm() : this("Dream OS") { }
     public RetroForm(string title)
     {
-        Text=title; Font=new("Tahoma",10); BackColor=Theme.Cream; ForeColor=Theme.Ink;
+        Text=title; Font=new("Segoe UI",10); BackColor=Theme.Cream; ForeColor=Theme.Ink;
         AutoScaleDimensions=new(96,96); AutoScaleMode=AutoScaleMode.Dpi; Size=new(840,650); MinimumSize=new(580,430); StartPosition=FormStartPosition.CenterScreen;
         FormBorderStyle=FormBorderStyle.None; Padding=new(4); DoubleBuffered=true;
         chrome=new(this); Controls.Add(chrome); Controls.Add(grip);
@@ -210,7 +240,7 @@ public class RetroForm : Form
         else { normalBounds=Bounds; IsWorkspaceMaximized=true; Bounds=Parent.ClientRectangle; BringToFront(); }
         grip.Visible=!IsWorkspaceMaximized;
     }
-    protected override void OnShown(EventArgs e) { chrome.Sync(); base.OnShown(e); }
+    protected override void OnShown(EventArgs e) { Theme.StyleInputs(this); chrome.Sync(); base.OnShown(e); }
     protected override bool ProcessCmdKey(ref Message msg,Keys keyData)
     {
         if(!TopLevel&&(keyData==(Keys.Control|Keys.W)||keyData==(Keys.Alt|Keys.F4))) { Close(); return true; }
@@ -223,7 +253,7 @@ public class RetroForm : Form
 public class ExerciseForm : RetroForm
 {
     protected FlowLayoutPanel Body { get; } = new() { Dock=DockStyle.Fill, FlowDirection=FlowDirection.TopDown, WrapContents=false, AutoScroll=true, Padding=new(14), BackColor=Theme.Cream };
-    protected Label Output { get; } = new() { AutoSize=true, MaximumSize=new(200,0), BackColor=Color.Transparent, Padding=new(8), Margin=new(5), Text="Ready when you are.", Font=new("Tahoma",11,FontStyle.Bold) };
+    protected Label Output { get; } = new() { AutoSize=true, MaximumSize=new(200,0), BackColor=Color.Transparent, Padding=new(8), Margin=new(5), Text="Ready when you are.", Font=new("Segoe UI",11,FontStyle.Bold) };
     private readonly FlowLayoutPanel actions=new() { Dock=DockStyle.Bottom, Height=62, Padding=new(8), BackColor=Theme.Pink, AutoScroll=true };
     public ExerciseForm() : this("Dream OS exercise") { }
     protected ExerciseForm(string title) : base(title)
@@ -233,9 +263,9 @@ public class ExerciseForm : RetroForm
         string id=title.StartsWith("Special")?"pizza":title.StartsWith("3 Digits")?"lotto":title.StartsWith("Tuition")?"tuition":title.StartsWith("Employee")?"payroll":title.StartsWith("Hotel")?"hotel":title.StartsWith("Presidential")?"election":title.StartsWith("Password")?"password":title.StartsWith("Appliance")?"store":"about";
         var illustration=new PictureBox { Size=new(100,110), Image=Artwork.Icon(id,100), SizeMode=PictureBoxSizeMode.Zoom, Margin=new(45,10,0,16) };
         illustration.Disposed+=(_,_)=>illustration.Image?.Dispose(); summary.Controls.Add(illustration);
-        summary.Controls.Add(new Label { Text="♥  YOUR DREAM DESK", AutoSize=true, Font=new("Tahoma",10,FontStyle.Bold), ForeColor=Theme.Accent, Margin=new(6,4,4,15) });
+        summary.Controls.Add(new Label { Text="♥  YOUR DREAM DESK", AutoSize=true, Font=new("Segoe UI",10,FontStyle.Bold), ForeColor=Theme.Accent, Margin=new(6,4,4,15) });
         summary.Controls.Add(Output); content.Controls.Add(Body); content.Controls.Add(summary); content.Controls.Add(actions); Controls.Add(content);
-        Body.Controls.Add(new Label { Text=title, Font=new("Tahoma",15,FontStyle.Bold), ForeColor=Theme.Accent, AutoSize=true, MaximumSize=new(500,0), Margin=new(5,5,5,18) });
+        Body.Controls.Add(new Label { Text=title, Font=new("Segoe UI",15,FontStyle.Bold), ForeColor=Theme.Accent, AutoSize=true, MaximumSize=new(500,0), Margin=new(5,5,5,18) });
     }
     protected void Field(string label,Control control)
     {
@@ -289,7 +319,7 @@ public sealed class GuideControl : UserControl
         Cursor=Cursors.SizeAll;
         var pause=new ToolStripMenuItem("Pause animations") { CheckOnClick=true };
         pause.CheckedChanged+=(_,_)=> { paused=pause.Checked; if(paused)animation.Stop(); else { clock.Restart(); animation.Start(); } Invalidate(); };
-        menu.BackColor=Theme.Cream; menu.Font=new("Tahoma",9);
+        menu.BackColor=Theme.Cream; menu.Font=new("Segoe UI",9);
         menu.Items.Add(pause); menu.Items.Add("Return guide home",null,(_,_)=>ResetHome()); ContextMenuStrip=menu;
         animation.Tick+=(_,_)=> { if(clock.Elapsed.TotalSeconds>=3) { animation.Stop(); } Invalidate(); };
         KeyDown+=(_,e)=>
@@ -338,7 +368,7 @@ public sealed class GuideControl : UserControl
         g.FillRectangle(fill,bubble); g.DrawRectangle(edge,bubble);
         var tail=new[]{new Point(Width/2-8,bubble.Bottom),new Point(Width/2,bubble.Bottom+9),new Point(Width/2+8,bubble.Bottom)};
         g.FillPolygon(fill,tail); g.DrawLines(edge,tail);
-        using var tagFont=new Font("Tahoma",8,FontStyle.Bold); using var copyFont=new Font("Tahoma",9.5f);
+        using var tagFont=new Font("Segoe UI",8,FontStyle.Bold); using var copyFont=new Font("Segoe UI",9.5f);
         TextRenderer.DrawText(g,"YOUR DREAM GUIDE · DRAG ME",tagFont,new Rectangle(12,12,Width-24,(int)(18*scale)),Theme.Accent,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter|TextFormatFlags.EndEllipsis);
         TextRenderer.DrawText(g,speech,copyFont,new Rectangle(14,(int)(36*scale),Width-28,bubble.Height-(int)(43*scale)),Theme.Ink,TextFormatFlags.NoPadding|TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.EndEllipsis);
         var frame=DreamOS.Core.GuideAnimation.Sample(activity,clock.Elapsed.TotalSeconds,paused||!animation.Enabled);

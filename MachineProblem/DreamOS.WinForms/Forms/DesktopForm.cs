@@ -15,7 +15,7 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
     private readonly GuideControl guide=new() { Anchor=AnchorStyles.Right|AnchorStyles.Bottom };
     private readonly System.Windows.Forms.Timer timer=new() { Interval=1000 };
     private readonly Label clock=new() { Dock=DockStyle.Right, Width=115, TextAlign=ContentAlignment.MiddleCenter, BorderStyle=BorderStyle.Fixed3D, BackColor=Theme.Cream };
-    private readonly ContextMenuStrip startMenu=new() { BackColor=Theme.Cream, Font=new("Tahoma",10), ShowImageMargin=true };
+    private readonly ContextMenuStrip startMenu=new() { BackColor=Theme.Cream, Font=new("Segoe UI",10), ShowImageMargin=true };
     private readonly List<string> notifications=[];
     private readonly ReminderService reminders=new(LocalData.Store("reminders",()=>new ReminderState()));
     private bool checkingReminders;
@@ -47,7 +47,7 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
         startMenu.Items.Add("Cascade windows",null,(_,_)=>ArrangeWindows(false)); startMenu.Items.Add("Tile windows",null,(_,_)=>ArrangeWindows(true));
         startMenu.Items.Add("Notifications",null,(_,_)=>ShowNotifications()); startMenu.Items.Add("Log out",null,(_,_)=>Logout()); startMenu.Items.Add("Exit Dream OS",null,(_,_)=>Close());
         var bottom=new Panel { Dock=DockStyle.Bottom, Height=64, BackColor=Theme.Pink, Padding=new(4) };
-        var start=Theme.Button("♥ Start",()=>startMenu.Show(bottom,new Point(0,0),ToolStripDropDownDirection.AboveRight)); start.Dock=DockStyle.Left; start.Width=100; start.AutoSize=false; start.Font=new("Tahoma",10,FontStyle.Bold);
+        var start=Theme.Button("♥ Start",()=>startMenu.Show(bottom,new Point(0,0),ToolStripDropDownDirection.AboveRight)); start.Dock=DockStyle.Left; start.Width=100; start.AutoSize=false; start.Font=new("Segoe UI",10,FontStyle.Bold);
         bottom.Controls.Add(taskbar); bottom.Controls.Add(clock); bottom.Controls.Add(start);
         calendar.Click+=(_,_)=>OpenWidgets("Clock + calendar");
         widgetDock.PageRequested+=OpenWidgets;
@@ -87,7 +87,7 @@ public sealed class DesktopForm : RetroForm,IDialogGuideHost
         int x=window is WorkflowForm?LogicalToDeviceUnits(12):Math.Max(10,(workspace.Width-window.Width)/2);
         window.Location=new(x,Math.Max(5,(workspace.Height-window.Height)/2));
         windows.Add(app.Id,window);
-        var task=Theme.Button(app.Title,()=>Restore(window)); task.AutoSize=false; task.MinimumSize=Size.Empty; task.Size=new(LogicalToDeviceUnits(172),LogicalToDeviceUnits(34)); task.Margin=new(3,2,3,2); task.Font=new("Tahoma",9); task.Image=Artwork.Icon(app.Id,24); task.BackColor=Theme.Cream; tasks.Add(app.Id,task); taskbar.Controls.Add(task);
+        var task=Theme.Button(app.Title,()=>Restore(window)); task.AutoSize=false; task.MinimumSize=Size.Empty; task.Size=new(LogicalToDeviceUnits(172),LogicalToDeviceUnits(34)); task.Margin=new(3,2,3,2); task.Font=new("Segoe UI",9); task.Image=Artwork.Icon(app.Id,24); task.BackColor=Theme.Cream; tasks.Add(app.Id,task); taskbar.Controls.Add(task);
         guide.Register(task,app.Help,app.Id); RegisterHelp(window,app.Help,app.Id);
         window.Enter+=(_,_)=>Highlight(app.Id);
         window.VisibleChanged+=(_,_)=> { if(!window.Visible)task.BackColor=Theme.Cream; };
@@ -164,14 +164,14 @@ internal sealed class WelcomeForm : RetroForm
         content.ColumnStyles.Add(new(SizeType.Absolute,166)); content.ColumnStyles.Add(new(SizeType.Percent,100));
         content.Controls.Add(new WelcomeArtwork { Dock=DockStyle.Fill, Margin=new(0) },0,0);
         var copy=new FlowLayoutPanel { Dock=DockStyle.Fill, FlowDirection=FlowDirection.TopDown, WrapContents=false, Padding=new(23,14,8,8), AutoScroll=true };
-        copy.Controls.Add(new Label { Text="MAKE YOURSELF AT HOME", AutoSize=true, ForeColor=Theme.Accent, Font=new("Tahoma",8,FontStyle.Bold), Margin=new(0,0,0,13) });
+        copy.Controls.Add(new Label { Text="MAKE YOURSELF AT HOME", AutoSize=true, ForeColor=Theme.Accent, Font=new("Segoe UI",8,FontStyle.Bold), Margin=new(0,0,0,13) });
         copy.Controls.Add(new Label { Text="Small programs.\nBig dreams.", AutoSize=true, ForeColor=Theme.Ink, Font=new("Consolas",24,FontStyle.Bold), Margin=new(0,0,0,14) });
-        copy.Controls.Add(new Label { Text="A little desktop for your ideas,\nprojects, and everyday daydreams.", AutoSize=true, ForeColor=Color.FromArgb(103,89,119), Font=new("Tahoma",10), Margin=new(0,0,0,20) });
+        copy.Controls.Add(new Label { Text="A little desktop for your ideas,\nprojects, and everyday daydreams.", AutoSize=true, ForeColor=Color.FromArgb(103,89,119), Font=new("Segoe UI",10), Margin=new(0,0,0,20) });
         var buttons=new FlowLayoutPanel { AutoSize=true, WrapContents=false, Margin=new(0) };
         var start=Theme.Button("Let's explore",Close); start.BackColor=Color.FromArgb(244,182,204); start.Margin=new(0,0,8,0);
         var tools=Theme.Button("My widgets",()=> { widgets(); Close(); }); tools.BackColor=Color.FromArgb(215,227,249); tools.Margin=new(0);
         buttons.Controls.Add(start); buttons.Controls.Add(tools); copy.Controls.Add(buttons);
-        copy.Controls.Add(new Label { Text="Choose any shortcut to begin.", AutoSize=true, ForeColor=Color.FromArgb(139,118,147), Font=new("Tahoma",8.5f), Margin=new(0,18,0,0) });
+        copy.Controls.Add(new Label { Text="Choose any shortcut to begin.", AutoSize=true, ForeColor=Color.FromArgb(139,118,147), Font=new("Segoe UI",8.5f), Margin=new(0,18,0,0) });
         content.Controls.Add(copy,1,0); var card=new IconCardPanel { Dock=DockStyle.Fill,Padding=new(8) }; card.Controls.Add(content); Controls.Add(card);
     }
     private sealed class WelcomeArtwork : Panel
@@ -186,7 +186,7 @@ internal sealed class WelcomeForm : RetroForm
             e.Graphics.DrawLine(line,22,37,32,37); e.Graphics.DrawLine(line,27,32,27,42);
             e.Graphics.DrawLine(line,Width-40,66,Width-30,66); e.Graphics.DrawLine(line,Width-35,61,Width-35,71);
             if(computer is not null) { int size=Math.Min(Width-30,LogicalToDeviceUnits(100)); e.Graphics.InterpolationMode=System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor; e.Graphics.DrawImage(computer,new Rectangle(cx-size/2,cy-size/2,size,size)); }
-            using var font=new Font("Tahoma",8.5f,FontStyle.Bold);
+            using var font=new Font("Segoe UI",8.5f,FontStyle.Bold);
             TextRenderer.DrawText(e.Graphics,"HELLO, DREAMER.",font,new Rectangle(8,cy+75,Width-16,40),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak|TextFormatFlags.NoPadding);
         }
         protected override void Dispose(bool disposing) { if(disposing)computer?.Dispose(); base.Dispose(disposing); }

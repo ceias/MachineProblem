@@ -11,7 +11,7 @@ internal static class ReceiptDesign
 {
     public const float Width=300,Header=218,Row=20,Footer=206,ContinuedFooter=44;
     private static readonly Color Rose=Color.FromArgb(203,99,144),Muted=Color.FromArgb(167,123,145);
-    private static Font Font(float px,bool bold=false)=>new("Tahoma",px,bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
+    private static Font Font(float px,bool bold=false)=>new("Segoe UI",px,bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel);
     public static List<ReceiptVisualRow> Layout(Graphics g,ReceiptData document)
     {
         using var font=Font(11.5f); var rows=new List<ReceiptVisualRow>();
@@ -107,7 +107,7 @@ internal sealed class BrandedReceiptView : Control
         if(document is null)
         {
             using var icon=WorkflowArt.Sprite(29); if(icon is not null)e.Graphics.DrawImage(icon,new Rectangle(Width/2-40,25,80,80));
-            using var font=new Font("Tahoma",9); TextRenderer.DrawText(e.Graphics,message,font,new Rectangle(15,133,Width-30,110),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak); return;
+            using var font=new Font("Segoe UI",9); TextRenderer.DrawText(e.Graphics,message,font,new Rectangle(15,133,Width-30,110),Theme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.WordBreak); return;
         }
         var state=e.Graphics.Save(); e.Graphics.PageUnit=GraphicsUnit.Pixel; float scale=Width/ReceiptDesign.Width; e.Graphics.ScaleTransform(scale,scale);
         ReceiptDesign.Draw(e.Graphics,document,rows,0,rows.Count,true); e.Graphics.Restore(state);

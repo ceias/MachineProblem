@@ -3,13 +3,11 @@ namespace DreamOS.WinForms.Controls;
 
 public class IconCardPanel : Panel
 {
-    public IconCardPanel() { DoubleBuffered=true; BackColor=Color.FromArgb(255,251,249); Margin=new(5); Padding=new(12); }
+    public IconCardPanel() { DoubleBuffered=true; BackColor=Theme.Cream; Margin=new(5); Padding=new(12); }
     protected override void OnPaint(PaintEventArgs e)
     {
-        base.OnPaint(e); using var pen=new Pen(Color.FromArgb(222,193,211)); var r=Rectangle.Inflate(ClientRectangle,-1,-1); if(r.Width<12||r.Height<12)return;
-        using var path=new GraphicsPath(); const int d=12;
-        path.AddArc(r.Left,r.Top,d,d,180,90); path.AddArc(r.Right-d,r.Top,d,d,270,90); path.AddArc(r.Right-d,r.Bottom-d,d,d,0,90); path.AddArc(r.Left,r.Bottom-d,d,d,90,90); path.CloseFigure();
-        e.Graphics.SmoothingMode=SmoothingMode.AntiAlias; e.Graphics.DrawPath(pen,path);
+        base.OnPaint(e);
+        DreamStyle.Surface(e.Graphics,ClientRectangle,Color.FromArgb(255,252,255),Color.FromArgb(255,238,248));
     }
 }
 public static class CardIcons
