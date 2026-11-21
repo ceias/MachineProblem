@@ -1,6 +1,6 @@
 using DreamOS.Core;
 using DreamOS.WinForms.Services;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 using DreamOS.WinForms.Controls;
 
 namespace DreamOS.WinForms.Forms;
@@ -28,7 +28,7 @@ public sealed class LoginForm : RetroForm
         {
             try
             {
-                var accounts=new AccountService(Path.Combine(LocalData.DirectoryPath,"accounts.db"));
+                var accounts=new AccountService(Environment.GetEnvironmentVariable("DREAMOS_SQL_CONNECTION"));
                 if(registering)
                 {
                     if(password.Text!=confirm.Text) { error.Text="Passwords must match."; return; }
@@ -43,8 +43,8 @@ public sealed class LoginForm : RetroForm
                 error.Text=""; Authenticated?.Invoke(this,EventArgs.Empty);
             }
             catch(ArgumentException ex) { error.Text=ex.Message; }
-            catch(Exception ex) when(ex is SqliteException or IOException or UnauthorizedAccessException)
-            { DreamDialog.Show(this,"The account database could not be opened or saved. Check your local app-data folder permissions and try again.","Account database",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
+            catch(Exception ex) when(ex is SqlException or IOException or UnauthorizedAccessException or InvalidOperationException)
+            { DreamDialog.Show(this,"Could not connect to the DreamOS SQL Server database. Check that SQL Server Express LocalDB is installed and available, or configure DREAMOS_SQL_CONNECTION for your SQL Server.","Account database",MessageBoxButtons.OK,MessageBoxIcon.Warning); }
 
         });
         submit.AutoSize=false; submit.Bounds=new(78,392,194,42); submit.BackColor=Color.FromArgb(239,111,163); submit.ForeColor=Color.White; submit.Font=new("Tahoma",12,FontStyle.Bold); submit.TabIndex=3;

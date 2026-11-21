@@ -48,7 +48,7 @@ Keyboard: Tab/Shift+Tab move focus, Enter activates the login button, Space acti
 
 Calculations follow the original screenshots in `DreamOS/05_Original_References`, rather than the generated design board. PHP amounts use `decimal` and two-decimal rounding away from zero. Payroll uses continuous SSS intervals: below 1,000 = 1%; [1,000, 5,000) = 3%; [5,000, 10,000) = 5%; 10,000+ = 7%. Payroll days are limited to a 31-day pay period.
 
-The supplied screenshots do not specify a usable password or full employee/voter roster. The separate Password Entry exercise uses the documented demo password `dream10`; desktop sign-in uses the local account database. Employee names are sample records. Demo voter IDs are `12345`, `10001`, `10002`, `10003`. Classroom candidate labels follow the reference: Noli, Val, Lester, Gwapo. Tallies start at zero. Authentication, voting and lotto are local educational demonstrations; accounts are local to this computer and no public elections, stakes or prizes are involved.
+The supplied screenshots do not specify a usable password or full employee/voter roster. The separate Password Entry exercise uses the documented demo password `dream10`; desktop sign-in uses the SQL Server account database. Employee names are sample records. Demo voter IDs are `12345`, `10001`, `10002`, `10003`. Classroom candidate labels follow the reference: Noli, Val, Lester, Gwapo. Tallies start at zero. Authentication, voting and lotto are local educational demonstrations; accounts are local to this computer and no public elections, stakes or prizes are involved.
 
 Notes and votes are stored atomically under `%LOCALAPPDATA%\DreamOS` as `notes.json` and `classroom-votes.json`. This is per Windows user, shared across demo login names. File/JSON errors are reported without silently discarding saved votes. To recover corrupt data, close the app and restore a backup or rename the affected JSON file. Demo votes can also be reset with confirmation inside Elections.
 
@@ -155,8 +155,20 @@ If a recording still cannot load, export an actual MP3 or PCM WAV (16-bit, 44.1 
 
 Current cross-platform validation: 106 checks pass, including audio-container signature and mislabeled-file cases. Both .NET 10 entry projects compile. Actual Windows codec/device playback and the user's specific recording cannot be validated on this Linux host. On Windows check MP3, PCM WAV, a converted/compressed recording, pause/resume, end-of-track looping, Stop, failed-file selection with an existing track, and closing the widget while playing.
 
-## Local login database
+## SQL Server login database
 
-The login screen uses **SQLite**, supplied by the **Microsoft.Data.Sqlite 10.0.0** NuGet package in DreamOS.Core. Visual Studio restores this package automatically during build; no SQL Server installation or additional database workload is needed. If restore is disabled, right-click the solution and choose **Restore NuGet Packages**. Keep the **.NET desktop development** workload and .NET 10 SDK installed.
+The login screen uses **Microsoft.Data.SqlClient 7.1.2**, restored through NuGet. Install **SQL Server Express LocalDB** with Visual Studio Installer (Individual components), or use an existing SQL Server instance. The NuGet package is the C# connector; it does not install the database engine.
 
-The app creates `%LOCALAPPDATA%\DreamOS\accounts.db` automatically. Accounts persist after restart, with case-insensitive unique usernames, random salts and PBKDF2-SHA256 password hashes (210,000 iterations). No default account or plain-text passwords are stored. Back up the database with the application closed. This is a local classroom account system, with no email recovery or remote synchronization. Notes and votes retain their existing per-Windows-user storage.
+Default connection (Windows authentication):
+
+```text
+Server=(localdb)\MSSQLLocalDB;Database=DreamOS;Integrated Security=true;Encrypt=true;TrustServerCertificate=true;Connect Timeout=10
+```
+
+On first sign-in or registration, Dream OS creates the `DreamOS` database and `dbo.Accounts` table. LocalDB runs under your Windows account. In Visual Studio open **View → SQL Server Object Explorer**, connect to `(localdb)\MSSQLLocalDB`, then expand **Databases → DreamOS → Tables → dbo.Accounts** and choose **View Data**. No viewer extension is required.
+
+For another server, set the `DREAMOS_SQL_CONNECTION` environment variable before launching Visual Studio. Include a database name; the login needs permission to create the database if it does not exist and to create/read/insert the Accounts table. The default trusts the local development server certificate; use a trusted certificate and `TrustServerCertificate=false` for a remote server. Do not commit credentials.
+
+Usernames are case-insensitive and unique. Passwords use random salts and PBKDF2-SHA256 hashes (210,000 iterations). There is no default account: choose **Create account / Sign in** to register. Previous SQLite `accounts.db` files are preserved but are not migrated or read; register again in SQL Server. Notes and votes retain their existing storage.
+
+SQL Server integration checks are opt-in: set `DREAMOS_TEST_SQLSERVER` to a **fresh disposable test database connection** and run DreamOS.Tests. The test suite creates sample accounts in that database; do not point it at your actual DreamOS database. Linux build/calculation checks do not prove SQL Server connectivity. On Windows verify registration, duplicate rejection, wrong password, and login after restarting the app.
